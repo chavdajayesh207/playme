@@ -1,0 +1,6 @@
+{
+  "name": "Playme.",
+  "description": "An immersive audio and music application for playing premium podcasts, real-time visualizers, and curated music streams.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

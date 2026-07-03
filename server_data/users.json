@@ -1,0 +1,13 @@
+{
+  "3113236e-6882-4331-af81-f3bb882dacec": {
+    "id": "3113236e-6882-4331-af81-f3bb882dacec",
+    "name": "CHAVDA",
+    "email": "chavdajayesh207@gmail.com",
+    "passwordHash": "$2b$10$8cyld23ZENfev8L9zTgVNeN95HsioWS/lpY1Ie2tVKfI6TjOnj.K6",
+    "avatar": "https://api.dicebear.com/9.x/micah/svg?seed=jayesh&backgroundColor=transparent&baseColor=f9a8d4,fcd34d,86efac,93c5fd&mouth=smile,laughing",
+    "isVerified": false,
+    "createdAt": 1780749220558,
+    "updatedAt": 1783058221041,
+    "lastLogin": 1783058221041
+  }
+}
