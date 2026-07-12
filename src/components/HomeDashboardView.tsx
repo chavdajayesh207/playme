@@ -209,7 +209,7 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({ onBrowseAl
         <section className="relative">
           {/* Hero Banner */}
           <div
-            className="relative h-[35vh] md:h-[380px] rounded-3xl overflow-hidden group cursor-pointer border border-white/10 shadow-2xl"
+            className="relative h-[40vh] md:h-[380px] rounded-3xl overflow-hidden group cursor-pointer border border-white/10 shadow-2xl"
             onClick={() => handlePlayHomeTrack(heroTrack, trending)}
           >
             {/* Background image with transition */}
