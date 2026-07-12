@@ -796,9 +796,9 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
 
         {/* Content Area */}
         <div className="relative z-10 flex-grow flex h-full px-6 md:px-8 items-center overflow-hidden">
-          {/* Left Vertical Sidenav Icons Bar */}
-          <aside className={`fixed left-6 md:left-8 top-1/2 -translate-y-1/2 flex flex-col justify-center z-50 pointer-events-auto transition-opacity duration-500 ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-            <div className="mb-4">
+          {/* Navigation Bar (Bottom on Mobile, Left Sidebar on Desktop) */}
+          <aside className={`fixed bottom-2 md:bottom-auto left-1/2 md:left-8 md:top-1/2 -translate-x-1/2 md:-translate-x-0 md:-translate-y-1/2 flex flex-row md:flex-col justify-center z-[100] pointer-events-auto transition-opacity duration-500 w-[95%] md:w-auto ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <div className="hidden md:flex mb-4">
               <button 
                 onClick={() => {
                   handleTabChange(TabletTab.HOME);
@@ -812,7 +812,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                 <ArrowLeft className="w-4 h-4" />
               </button>
             </div>
-            <div className="glass-dark-mav w-12 md:w-14 rounded-3xl py-4 md:py-6 flex flex-col items-center space-y-5 md:space-y-6 sidebar-nav-scroll" id="sidebar-nav">
+            <div className="glass-dark-mav w-full md:w-14 rounded-[2rem] md:rounded-3xl py-3 px-4 md:px-0 md:py-6 flex flex-row md:flex-col items-center justify-around md:justify-center space-x-2 md:space-x-0 md:space-y-6 sidebar-nav-scroll shadow-2xl backdrop-blur-xl border border-white/10" id="sidebar-nav">
               <button 
                 onClick={() => {
                   if (activeTab === TabletTab.HOME && showDashboard) {
@@ -824,10 +824,10 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                     setShowDashboard(true); // Force show dashboard view
                   }
                 }}
-                className={`p-2 rounded-xl transition-all cursor-pointer shrink-0 ${activeTab === TabletTab.HOME && showDashboard ? 'text-white bg-white/15' : 'text-gray-400 hover:text-pink-400'}`}
+                className={`p-3 md:p-2 rounded-2xl transition-all cursor-pointer shrink-0 ${activeTab === TabletTab.HOME && showDashboard ? 'text-white bg-white/15' : 'text-gray-400 hover:text-pink-400'}`}
                 title="Home Dashboard"
               >
-                <Home className="w-5 h-5" />
+                <Home className="w-6 h-6 md:w-5 md:h-5" />
               </button>
               <button 
                 onClick={() => {
@@ -839,10 +839,10 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                     handleTabChange(TabletTab.GENRES);
                   }
                 }}
-                className={`p-2 rounded-xl transition-all cursor-pointer shrink-0 ${activeTab === TabletTab.GENRES ? 'text-white bg-white/15' : 'text-gray-400 hover:text-pink-400'}`}
+                className={`p-3 md:p-2 rounded-2xl transition-all cursor-pointer shrink-0 ${activeTab === TabletTab.GENRES ? 'text-white bg-white/15' : 'text-gray-400 hover:text-pink-400'}`}
                 title="Discover & Search"
               >
-                <Search className="w-5 h-5" />
+                <Search className="w-6 h-6 md:w-5 md:h-5" />
               </button>
               <button 
                 onClick={() => {
@@ -854,10 +854,10 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                     handleTabChange(TabletTab.LIVE);
                   }
                 }}
-                className={`p-2 rounded-xl transition-all cursor-pointer shrink-0 ${activeTab === TabletTab.LIVE ? 'text-white bg-white/15' : 'text-gray-400 hover:text-pink-400'}`}
+                className={`p-3 md:p-2 rounded-2xl transition-all cursor-pointer shrink-0 ${activeTab === TabletTab.LIVE ? 'text-white bg-white/15' : 'text-gray-400 hover:text-pink-400'}`}
                 title="Live Music"
               >
-                <Music className="w-5 h-5" />
+                <Music className="w-6 h-6 md:w-5 md:h-5" />
               </button>
               <button 
                 onClick={() => {
@@ -869,10 +869,10 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                     handleTabChange(TabletTab.FAVORITES);
                   }
                 }}
-                className={`p-2 rounded-xl transition-all cursor-pointer shrink-0 ${activeTab === TabletTab.FAVORITES ? 'text-white bg-white/15' : 'text-gray-400 hover:text-pink-400'}`}
+                className={`p-3 md:p-2 rounded-2xl transition-all cursor-pointer shrink-0 ${activeTab === TabletTab.FAVORITES ? 'text-white bg-white/15' : 'text-gray-400 hover:text-pink-400'}`}
                 title="Library"
               >
-                <Folder className="w-5 h-5" />
+                <Folder className="w-6 h-6 md:w-5 md:h-5" />
               </button>
               <button 
                 onClick={() => {
@@ -884,15 +884,15 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                     handleTabChange(TabletTab.LIBRARY);
                   }
                 }}
-                className={`p-2 rounded-xl transition-all cursor-pointer shrink-0 ${activeTab === TabletTab.LIBRARY ? 'text-white bg-white/15' : 'text-gray-400 hover:text-pink-400'}`}
+                className={`p-3 md:p-2 rounded-2xl transition-all cursor-pointer shrink-0 ${activeTab === TabletTab.LIBRARY ? 'text-white bg-white/15' : 'text-gray-400 hover:text-pink-400'}`}
                 title="Upload & Manage"
               >
-                <List className="w-5 h-5" />
+                <List className="w-6 h-6 md:w-5 md:h-5" />
               </button>
             </div>
           </aside>
 
-          <div className="flex-1 flex flex-col h-full ml-20 sm:ml-24 md:ml-28 lg:ml-32 mr-6 sm:mr-8 md:mr-12 lg:mr-32 justify-between min-w-0 pr-1 select-none overflow-hidden relative">
+          <div className="flex-1 flex flex-col h-full ml-0 md:ml-28 lg:ml-32 mr-0 md:mr-12 lg:mr-32 justify-between min-w-0 pr-1 select-none overflow-hidden relative pb-[80px] md:pb-0">
             <AnimatePresence mode="wait">
               {activeTab === TabletTab.HOME ? (
                 showDashboard ? (
@@ -1903,7 +1903,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
         </div>
 
         {/* Adaptive Footer Navigation Bar — glassmorphic, adapts to video/audio mode */}
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 ${isPodcastPlayerActive ? 'z-[35]' : 'z-[40]'} flex justify-center select-none pointer-events-none`}>
+        <div className={`hidden md:flex fixed bottom-6 left-1/2 -translate-x-1/2 ${isPodcastPlayerActive ? 'z-[35]' : 'z-[40]'} justify-center select-none pointer-events-none`}>
           <div 
             className={`flex items-center gap-1 px-1.5 py-1.5 rounded-full transition-all duration-500 ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'} ${
               isYtActive 
@@ -1965,8 +1965,8 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
           </div>
         </div>
 
-        {/* Fixed Bottom-Left Guest Listener / User Badge */}
-        <div className={`fixed bottom-6 left-6 md:left-8 z-[60] pointer-events-auto transition-opacity duration-500 ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'} user-badge-bottom select-none pointer-events-auto`}
+        {/* Fixed Guest Listener / User Badge (Top-Right on Mobile, Bottom-Left on Desktop) */}
+        <div className={`fixed top-6 right-6 md:top-auto md:bottom-6 md:left-8 md:right-auto z-[60] pointer-events-auto transition-opacity duration-500 flex items-center gap-3 ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'} user-badge-bottom select-none`}
           onClick={() => {
             if (!user) onAuthClick();
           }}
