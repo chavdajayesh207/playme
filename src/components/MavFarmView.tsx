@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAudioPlayer } from './AudioPlayerContext';
 import { useAuth } from './AuthContext';
 import { Track } from '../types';
-import { Search, ShoppingCart, ArrowLeft, Home, Music, List, User, Folder, Mic, MoreVertical, Bell, Download, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, EyeOff, AlignLeft, ScrollText, Clock, Minus, Plus, RotateCcw, Repeat, Share2, Camera, Activity, Zap, Crown, ChevronDown, Shuffle } from 'lucide-react';
+import { Search, ShoppingCart, ArrowLeft, Home, Music, List, User, Folder, Mic, MoreVertical, Bell, Download, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, EyeOff, AlignLeft, ScrollText, Clock, Minus, Plus, RotateCcw, Repeat, Share2, Camera, Activity, Zap, Crown, ChevronDown, Shuffle, MonitorSpeaker } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LiveStageView } from './LiveStageView';
 import { DiscoverView } from './DiscoverView';
