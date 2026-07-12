@@ -23,8 +23,8 @@ export const LandingView: React.FC<LandingViewProps> = ({ onStartListening, onEx
     >
       {/* Abstract Glowing Aura Grid */}
       <div className="absolute inset-0 z-0 opacity-45 flex items-center justify-center pointer-events-none">
-        <div className="absolute w-[500px] h-[500px] bg-[#00f2ff]/10 rounded-full blur-[100px] animate-pulse" />
-        <div className="absolute w-[400px] h-[400px] bg-[#ff571a]/5 rounded-full blur-[120px] delay-1000 animate-pulse" />
+        <div className="absolute w-[500px] h-[500px] bg-[#00f2ff]/10 rounded-full hidden md:block blur-[100px] animate-pulse" />
+        <div className="absolute w-[400px] h-[400px] bg-[#ff571a]/5 rounded-full hidden md:block blur-[120px] delay-1000 animate-pulse" />
         <div
           className="w-full max-w-4xl h-[450px] opacity-25 filter blur-xs"
           style={{
@@ -36,7 +36,7 @@ export const LandingView: React.FC<LandingViewProps> = ({ onStartListening, onEx
       <div className="relative z-10 flex flex-col items-center max-w-3xl mx-auto mt-6">
         {/* Floating Headphone Container */}
         <div className="relative w-72 h-72 md:w-96 md:h-96 mb-6 flex items-center justify-center group">
-          <div className="absolute inset-0 bg-radial from-[#00f2ff]/20 to-transparent rounded-full blur-[60px] animate-pulse pointer-events-none" />
+          <div className="absolute inset-0 bg-radial from-[#00f2ff]/20 to-transparent rounded-full hidden md:block blur-[60px] animate-pulse pointer-events-none" />
           <img
             alt="Playme Headphone"
             className="w-full h-full object-contain drop-shadow-[0_25px_50px_rgba(0,219,231,0.3)] animate-bounce select-none pointer-events-none"

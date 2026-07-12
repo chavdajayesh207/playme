@@ -334,7 +334,7 @@ export const CollectionsView: React.FC<CollectionsViewProps> = ({ onAuthClick })
                 </button>
 
                 <div className="glass-dark-mav p-6 md:p-8 rounded-3xl border border-white/5 flex flex-col md:flex-row gap-6 relative overflow-hidden shadow-2xl">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-[#00f2ff]/5 rounded-full blur-[80px] pointer-events-none" />
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-[#00f2ff]/5 rounded-full hidden md:block blur-[80px] pointer-events-none" />
                   
                   <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-tr from-[#00f2ff]/30 to-indigo-500/20 border border-[#00f2ff]/20 flex items-center justify-center text-[#00f2ff] shrink-0 shadow-md">
                     <Music size={36} className="animate-pulse" />

@@ -150,10 +150,6 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
 
 /* Fixed bottom-left user badge */
 .user-badge-bottom {
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
-  z-index: 50;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   background: rgba(0, 0, 0, 0.55);

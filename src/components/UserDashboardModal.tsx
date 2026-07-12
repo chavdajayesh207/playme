@@ -67,8 +67,8 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({ isOpen, 
         className="relative bg-white/[0.02] border border-white/[0.08] backdrop-blur-2xl rounded-3xl w-full max-w-lg overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.6)] p-6 md:p-8 flex flex-col gap-6"
       >
         {/* Neon Glow Accents */}
-        <div className="absolute top-[-10%] left-[-10%] w-56 h-56 bg-[#00f2ff]/6 rounded-full blur-[60px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-56 h-56 bg-pink-500/6 rounded-full blur-[60px] pointer-events-none" />
+        <div className="absolute top-[-10%] left-[-10%] w-56 h-56 bg-[#00f2ff]/6 rounded-full hidden md:block blur-[60px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-56 h-56 bg-pink-500/6 rounded-full hidden md:block blur-[60px] pointer-events-none" />
 
         {/* Header */}
         <div className="flex justify-between items-center relative z-10">

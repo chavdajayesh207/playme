@@ -2605,6 +2605,44 @@ app.post("/api/auth/reset", async (req, res) => {
 });
 
 // ==========================================
+// Cloud Sync API — Cross-Device User Data
+// ==========================================
+
+// GET /api/user/sync — Fetch the user's cloud-saved data
+app.get("/api/user/sync", authenticateToken, (req: any, res: any) => {
+  try {
+    const data = userDb.getUserSyncData(req.user.id);
+    if (!data) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json(data);
+  } catch (err: any) {
+    console.error("[Sync API] GET /api/user/sync failed:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/user/sync — Save the user's data to cloud
+app.post("/api/user/sync", authenticateToken, (req: any, res: any) => {
+  try {
+    const { favorites, followedArtists, history, settings } = req.body;
+    const updated = userDb.syncUserData(req.user.id, {
+      favorites,
+      followedArtists,
+      history,
+      settings,
+    });
+    if (!updated) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json({ success: true, message: "User data synced to cloud" });
+  } catch (err: any) {
+    console.error("[Sync API] POST /api/user/sync failed:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ==========================================
 // Vite Dev & Production Integration middleware
 // ==========================================
 async function startServer() {

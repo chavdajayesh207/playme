@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
 import { Track, CustomPlaylist } from '../types';
 import { TRACKS, GENRES, GenreItem } from '../data';
 import { playmeDb, getUserTracks, getUserGenres, saveUserTrack, deleteUserTrack, saveUserGenre, deleteUserGenre } from '../lib/db';
@@ -145,6 +145,86 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   });
   const [vibeQueue, setVibeQueue] = useState<Track[]>([]);
   const [loadingVibeQueue, setLoadingVibeQueue] = useState<boolean>(false);
+
+  // ── Cloud History (synced to server) ──
+  const [cloudHistory, setCloudHistory] = useState<Array<{ id: string; title: string; artist: string; coverUrl: string; playedAt: number }>>([]);
+  const cloudPushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cloudSyncedRef = useRef(false); // prevents duplicate fetches
+
+  /** Push current user data to the cloud (debounced 2s) */
+  const pushCloudSync = useCallback((favs?: string[], history?: typeof cloudHistory) => {
+    const token = localStorage.getItem('playme_auth_token');
+    if (!token) return;
+
+    if (cloudPushTimerRef.current) clearTimeout(cloudPushTimerRef.current);
+    cloudPushTimerRef.current = setTimeout(async () => {
+      try {
+        const followedRaw = localStorage.getItem('playme_followed_artists');
+        const followed = followedRaw ? Object.keys(JSON.parse(followedRaw)) : [];
+        await fetch('/api/user/sync', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            favorites: favs,
+            followedArtists: followed,
+            history: history,
+          })
+        });
+      } catch (err) {
+        console.warn('[CloudSync] Push failed (will retry on next change):', err);
+      }
+    }, 2000);
+  }, []);
+
+  /** Fetch cloud data on login / page load and hydrate local state */
+  const fetchCloudSync = useCallback(async () => {
+    const token = localStorage.getItem('playme_auth_token');
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/user/sync', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      // Hydrate favorites
+      if (data.favorites && data.favorites.length > 0) {
+        setFavoriteIds(data.favorites);
+        localStorage.setItem('playme_favs', JSON.stringify(data.favorites));
+      }
+
+      // Hydrate followed artists
+      if (data.followedArtists && data.followedArtists.length > 0) {
+        const obj: Record<string, boolean> = {};
+        data.followedArtists.forEach((a: string) => { obj[a] = true; });
+        localStorage.setItem('playme_followed_artists', JSON.stringify(obj));
+      }
+
+      // Hydrate history
+      if (data.history && data.history.length > 0) {
+        setCloudHistory(data.history);
+      }
+
+      console.log('[CloudSync] Fetched cloud data successfully');
+    } catch (err) {
+      console.warn('[CloudSync] Fetch failed:', err);
+    }
+  }, []);
+
+  // Trigger cloud fetch when user logs in
+  useEffect(() => {
+    if (user && !cloudSyncedRef.current) {
+      cloudSyncedRef.current = true;
+      fetchCloudSync();
+    }
+    if (!user) {
+      cloudSyncedRef.current = false;
+    }
+  }, [user, fetchCloudSync]);
 
   useEffect(() => {
     localStorage.setItem('playme_autoplay', isAutoplay ? 'true' : 'false');
@@ -1059,9 +1139,13 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, [volume]);
 
-  // Sync favorites with localstorage
+  // Sync favorites with localstorage AND cloud
   useEffect(() => {
     localStorage.setItem('playme_favs', JSON.stringify(favoriteIds));
+    // Push favorites to cloud whenever they change (debounced)
+    if (user) {
+      pushCloudSync(favoriteIds, cloudHistory);
+    }
   }, [favoriteIds]);
 
   const playTrack = (track: Track, customQueue?: Track[]) => {
@@ -1107,6 +1191,16 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       }
     };
     recordListeningHistory(track.id);
+
+    // Record to cloud history
+    if (user) {
+      setCloudHistory(prev => {
+        const entry = { id: track.id, title: track.title, artist: track.artist, coverUrl: track.coverUrl, playedAt: Date.now() };
+        const updated = [...prev.filter(h => h.id !== track.id), entry].slice(-50);
+        pushCloudSync(undefined, updated);
+        return updated;
+      });
+    }
   };
 
   const togglePlay = () => {

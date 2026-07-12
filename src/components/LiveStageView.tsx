@@ -841,8 +841,8 @@ export const LiveStageView: React.FC = () => {
             id="podcast-hub-hero"
             className="relative rounded-3xl overflow-hidden p-8 md:p-12 border border-white/5 bg-gradient-to-r from-[#201418] via-[#121319] to-[#0c0d0f] flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl"
           >
-            <div className="absolute top-0 right-0 w-80 h-80 bg-pink-500/5 rounded-full blur-[80px] pointer-events-none" />
-            <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-[#00f2ff]/5 rounded-full blur-[70px] pointer-events-none" />
+            <div className="absolute top-0 right-0 w-80 h-80 bg-pink-500/5 rounded-full hidden md:block blur-[80px] pointer-events-none" />
+            <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-[#00f2ff]/5 rounded-full hidden md:block blur-[70px] pointer-events-none" />
 
             <div className="max-w-2xl relative z-10">
               <span className="uppercase tracking-widest text-[9px] font-mono font-bold text-[#00f2ff] bg-[#00f2ff]/10 px-3 py-1 rounded-full border border-[#00f2ff]/20">
@@ -1255,8 +1255,8 @@ export const LiveStageView: React.FC = () => {
             className="relative rounded-3xl overflow-hidden p-8 md:p-12 border border-white/5 bg-gradient-to-r from-[#1c142c] via-[#101925] to-[#0d0d0e] flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl"
           >
             {/* Atmosphere glowing halo */}
-            <div className="absolute top-0 right-0 w-80 h-80 bg-[#00f2ff]/10 rounded-full blur-[80px] pointer-events-none" />
-            <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-[#ff5ec3]/5 rounded-full blur-[70px] pointer-events-none" />
+            <div className="absolute top-0 right-0 w-80 h-80 bg-[#00f2ff]/10 rounded-full hidden md:block blur-[80px] pointer-events-none" />
+            <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-[#ff5ec3]/5 rounded-full hidden md:block blur-[70px] pointer-events-none" />
 
             <div className="max-w-2xl relative z-10">
               <h2 className="font-headline font-semibold text-3xl md:text-5xl text-white tracking-tight leading-tight">

@@ -74,7 +74,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         className="relative bg-[#001416]/95 border border-white/10 rounded-[32px] w-full max-w-5xl h-[85vh] overflow-hidden shadow-[0_0_80px_rgba(0,242,255,0.15)] flex flex-col md:flex-row"
       >
         {/* Dynamic Glow */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#00f2ff]/5 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#00f2ff]/5 hidden md:block blur-[120px] rounded-full pointer-events-none" />
 
         {/* Sidebar */}
         <div className="md:w-72 bg-black/40 border-r border-white/5 p-6 flex flex-col shrink-0">

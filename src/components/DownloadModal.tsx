@@ -44,8 +44,8 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose, c
       <div className="relative bg-[#0b0a0c] border border-white/[0.08] backdrop-blur-2xl rounded-3xl w-full max-w-sm overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.6)] p-6 flex flex-col gap-5 transition-all">
         
         {/* Glow Effects */}
-        <div className="absolute top-[-20%] left-[-20%] w-40 h-40 bg-[#00f2ff]/10 rounded-full blur-[50px] pointer-events-none animate-pulse" />
-        <div className="absolute bottom-[-20%] right-[-20%] w-40 h-40 bg-pink-500/10 rounded-full blur-[50px] pointer-events-none animate-pulse" />
+        <div className="absolute top-[-20%] left-[-20%] w-40 h-40 bg-[#00f2ff]/10 rounded-full hidden md:block blur-[50px] pointer-events-none animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-20%] w-40 h-40 bg-pink-500/10 rounded-full hidden md:block blur-[50px] pointer-events-none animate-pulse" />
 
         {/* Close Button */}
         <button

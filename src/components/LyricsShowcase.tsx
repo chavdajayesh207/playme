@@ -120,7 +120,7 @@ export const LyricsShowcase: React.FC = () => {
           className="relative rounded-2xl overflow-hidden p-6 select-none h-[340px] flex flex-col justify-center items-center gap-4 animate-fade-in"
         >
           <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden opacity-30">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-gradient-to-tr from-[#00f2ff]/20 via-pink-500/10 to-transparent rounded-full blur-[90px]" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-gradient-to-tr from-[#00f2ff]/20 via-pink-500/10 to-transparent rounded-full hidden md:block blur-[90px]" />
           </div>
           <div className="w-10 h-10 rounded-full border-4 border-t-[#00f2ff] border-r-pink-500 border-white/10 animate-spin z-10" />
           <p className="text-xs font-mono uppercase tracking-widest text-[#00f2ff]/80 animate-pulse font-bold z-10">

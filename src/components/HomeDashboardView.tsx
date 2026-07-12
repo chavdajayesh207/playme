@@ -209,7 +209,7 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({ onBrowseAl
         <section className="relative">
           {/* Hero Banner */}
           <div
-            className="relative h-72 md:h-[380px] rounded-3xl overflow-hidden group cursor-pointer border border-white/10 shadow-2xl"
+            className="relative h-[35vh] md:h-[380px] rounded-3xl overflow-hidden group cursor-pointer border border-white/10 shadow-2xl"
             onClick={() => handlePlayHomeTrack(heroTrack, trending)}
           >
             {/* Background image with transition */}
@@ -350,7 +350,7 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({ onBrowseAl
                 <div
                   key={track.id}
                   onClick={() => handlePlayHomeTrack(track, data.tracks)}
-                  className={`group relative bg-gradient-to-br ${SECTION_COLORS[key] || 'from-white/5 to-white/[0.02]'} hover:from-white/10 hover:to-white/5 p-3.5 rounded-2xl border border-white/5 hover:border-white/15 transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[260px] w-[220px] md:w-[240px] shrink-0 snap-start shadow-lg backdrop-blur-sm`}
+                  className={`group relative bg-gradient-to-br ${SECTION_COLORS[key] || 'from-white/5 to-white/[0.02]'} hover:from-white/10 hover:to-white/5 p-3.5 rounded-2xl border border-white/5 hover:border-white/15 transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[260px] w-[80vw] sm:w-[220px] md:w-[240px] max-w-[280px] shrink-0 snap-start shadow-lg backdrop-blur-sm`}
                 >
                   {/* Cover Art */}
                   <div className="relative aspect-video rounded-xl overflow-hidden border border-white/10 bg-black/30">

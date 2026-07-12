@@ -117,8 +117,8 @@ export const UserProfilePortal: React.FC<UserProfilePortalProps> = ({ isOpen, on
         className="relative bg-[#001416]/90 backdrop-blur-3xl w-full max-w-[1600px] h-full sm:rounded-[32px] overflow-hidden flex flex-col shadow-[0_0_100px_rgba(0,0,0,1)] border border-white/10"
       >
         {/* Dynamic Glowing Background Blob */}
-        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[50%] bg-[#00f2ff]/10 blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-pink-500/5 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[50%] bg-[#00f2ff]/10 hidden md:block blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-pink-500/5 hidden md:block blur-[120px] rounded-full pointer-events-none" />
 
         {/* --- HEADER SECTION --- */}
         <div className="relative pt-20 pb-10 px-8 md:px-12 lg:px-16 flex flex-col md:flex-row items-center md:items-end gap-8 shrink-0 border-b border-white/5 bg-gradient-to-b from-[#00f2ff]/5 to-transparent">

@@ -490,7 +490,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         {/* Right Side: Visual Accent */}
         <div className="hidden md:block p-6 h-full min-h-[500px] select-none bg-[#020202] relative overflow-hidden">
           {/* Abstract background blobs */}
-          <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-gradient-to-br from-[#00f2ff]/20 via-purple-600/10 to-transparent blur-[80px] pointer-events-none" />
+          <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-gradient-to-br from-[#00f2ff]/20 via-purple-600/10 to-transparent hidden md:block blur-[80px] pointer-events-none" />
           
           <div className="w-full h-full rounded-[24px] border border-white/10 bg-black/40 backdrop-blur-3xl flex flex-col items-center justify-center p-8 relative overflow-hidden shadow-2xl">
             {/* Dynamic rings */}

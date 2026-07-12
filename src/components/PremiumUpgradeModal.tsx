@@ -30,8 +30,8 @@ export const PremiumUpgradeModal: React.FC = () => {
       <div className="w-full max-w-md bg-white/[0.03] border border-white/[0.08] backdrop-blur-2xl rounded-3xl overflow-hidden shadow-[0_24px_80px_rgba(0,242,255,0.1)] relative">
         
         {/* Glow Effects */}
-        <div className="absolute top-[-20%] left-[-20%] w-40 h-40 bg-[#00f2ff]/20 rounded-full blur-[60px] pointer-events-none animate-pulse" />
-        <div className="absolute bottom-[-20%] right-[-20%] w-40 h-40 bg-pink-500/20 rounded-full blur-[60px] pointer-events-none animate-pulse" />
+        <div className="absolute top-[-20%] left-[-20%] w-40 h-40 bg-[#00f2ff]/20 rounded-full hidden md:block blur-[60px] pointer-events-none animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-20%] w-40 h-40 bg-pink-500/20 rounded-full hidden md:block blur-[60px] pointer-events-none animate-pulse" />
         
         {/* Close Button */}
         <button 
