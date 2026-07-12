@@ -6,6 +6,7 @@ const CACHE_FILE = path.join(DATA_DIR, "api_cache.json");
 const TRACKS_METADATA_FILE = path.join(DATA_DIR, "tracks.json");
 const AUDIO_DIR = path.join(DATA_DIR, "audio");
 const COVERS_DIR = path.join(DATA_DIR, "covers");
+const HOME_CACHE_FILE = path.join(DATA_DIR, "home_cache.json");
 
 // Ensure directories exist on load
 function ensureDirs() {
@@ -48,6 +49,7 @@ class ServerDb {
   private apiCache: Record<string, CacheEntry> = {};
   private tracks: Record<string, ServerTrack> = {};
   private searchLimits: Record<string, number> = {};
+  private homeCache: any = null;
 
   constructor() {
     this.init();
@@ -88,6 +90,17 @@ class ServerDb {
         console.log(`[Database] Loaded search limits cache.`);
       } catch (e) {
         this.searchLimits = {};
+      }
+    }
+
+    // Load home cache
+    if (fs.existsSync(HOME_CACHE_FILE)) {
+      try {
+        const raw = fs.readFileSync(HOME_CACHE_FILE, 'utf-8');
+        this.homeCache = JSON.parse(raw);
+        console.log(`[Database] Loaded home dashboard cache.`);
+      } catch (e) {
+        this.homeCache = null;
       }
     }
 
@@ -345,6 +358,24 @@ class ServerDb {
       };
     } catch {
       return null;
+    }
+  }
+
+  // Home Dashboard Cache Accessors
+  public getHomeCache(): any | null {
+    return this.homeCache;
+  }
+
+  public setHomeCache(data: any) {
+    this.homeCache = data;
+    this.saveHomeCache();
+  }
+
+  private saveHomeCache() {
+    try {
+      fs.writeFileSync(HOME_CACHE_FILE, JSON.stringify(this.homeCache, null, 2), 'utf-8');
+    } catch (e) {
+      console.error('[Database] Failed to write home cache:', e);
     }
   }
 }

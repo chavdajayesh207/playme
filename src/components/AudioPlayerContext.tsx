@@ -247,12 +247,21 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
-  // Automatically fetch recommendations when current track changes
+  // Automatically fetch recommendations when nearing the end of the queue
   useEffect(() => {
-    if (currentTrack && isAutoplay) {
-      generateVibeQueue(currentTrack);
+    if (!currentTrack || !isAutoplay) return;
+    
+    const currentIndex = queue.findIndex((t) => t.id === currentTrack.id);
+    
+    // If the queue is empty, or we are currently playing the very last track in the queue:
+    if (queue.length === 0 || currentIndex >= queue.length - 1) {
+      const timeout = setTimeout(() => {
+        // Fetch 10 more songs to append to the queue to keep the music playing!
+        continueMyMood(); 
+      }, 2000); // 2-second debounce
+      return () => clearTimeout(timeout);
     }
-  }, [currentTrack?.id, isAutoplay]);
+  }, [currentTrack?.id, queue.length, isAutoplay]);
 
   useEffect(() => {
     let active = true;
@@ -692,6 +701,18 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
               },
               onStateChange: (event: any) => {
                 try {
+                  // Enforce playback quality on state changes
+                  if (event.data === -1 || event.data === 1 || event.data === 3) {
+                    if (typeof player.setPlaybackQuality === 'function') {
+                      const qualityMap = {
+                        'Data Saver': 'small',
+                        'High': 'hd720',
+                        'Lossless': 'hd1080'
+                      };
+                      player.setPlaybackQuality(qualityMap[audioQuality] || 'hd1080');
+                    }
+                  }
+
                   // event.data === 1 => PLAYING
                   if (event.data === 1) {
                     if (!isPlayingRef.current) {
@@ -1063,6 +1084,7 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
     setCurrentTrack(track);
     setIsPlaying(true);
+    setCurrentTime(0);
     setLyricsOffset(0);
 
     // Record listening history and queue sync
@@ -1523,8 +1545,8 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         className={`transition-[width,height,opacity,border-radius,top,left,bottom,right,transform] duration-500 ease-in-out ${
           (currentTrack?.isYoutube && !isYtFallbackActive && !offlineSourceUrl)
             ? (isHomeTabActive
-                ? (!showDashboard && placeholderRect
-                    ? 'fixed border border-white/10 bg-black pointer-events-auto z-[25] overflow-hidden shadow-lg animate-fade-in'
+                ? (placeholderRect
+                    ? 'fixed border border-white/10 bg-black pointer-events-auto z-[50] overflow-hidden shadow-lg animate-fade-in'
                     : 'fixed border border-white/10 bg-black pointer-events-auto z-[5] overflow-hidden'
                   )
                 : 'fixed rounded-xl overflow-hidden border border-[#feecff]/10 bg-black/95 z-50 pointer-events-auto shadow-[0_12px_45px_rgba(0,0,0,0.8)]'
@@ -1534,7 +1556,7 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         style={
           (currentTrack?.isYoutube && !isYtFallbackActive && !offlineSourceUrl)
             ? (isHomeTabActive
-                ? (!showDashboard && placeholderRect
+                ? (placeholderRect
                     ? { 
                         width: `${placeholderRect.width}px`, 
                         height: `${placeholderRect.height}px`, 

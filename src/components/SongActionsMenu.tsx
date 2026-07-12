@@ -19,9 +19,10 @@ import {
 interface SongActionsMenuProps {
   track: Track;
   className?: string;
+  direction?: 'up' | 'down';
 }
 
-export const SongActionsMenu: React.FC<SongActionsMenuProps> = ({ track, className = '' }) => {
+export const SongActionsMenu: React.FC<SongActionsMenuProps> = ({ track, className = '', direction = 'down' }) => {
   const { user } = useAuth();
   const {
     toggleFavorite,
@@ -165,7 +166,7 @@ export const SongActionsMenu: React.FC<SongActionsMenuProps> = ({ track, classNa
 
       {/* Dropdown Card */}
       {isOpen && (
-        <div className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} mt-2 w-56 rounded-2xl bg-black/90 backdrop-blur-xl border border-white/10 shadow-2xl p-1.5 z-50 animate-fade-in select-none`}>
+        <div className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} ${direction === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'} w-56 rounded-2xl bg-black/90 backdrop-blur-xl border border-white/10 shadow-2xl p-1.5 z-50 animate-fade-in select-none`}>
           {!showPlaylistsSubmenu ? (
             <div className="flex flex-col gap-0.5">
               {/* Play Next */}

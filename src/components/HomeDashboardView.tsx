@@ -3,395 +3,461 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Track } from '../types';
-import { TRACKS, FEATURED_TRENDING_IMAGE } from '../data';
 import { useAudioPlayer } from './AudioPlayerContext';
-import { Play, Pause, Flame, Disc, Radio, Sliders, ChevronRight, Music3, Volume2, Home, Search } from 'lucide-react';
+import { Play, Pause, Flame, Disc, Radio, ChevronRight, Music3, Eye, ThumbsUp, Clock, Calendar, Loader2, RefreshCw, TrendingUp, Headphones, Star, Mic, Heart, Sparkles } from 'lucide-react';
 import { LyricsShowcase } from './LyricsShowcase';
 import { SongActionsMenu } from './SongActionsMenu';
 import { HScroll } from './HScroll';
 import { MUSIC_GENRES } from '../lib/musicHubData';
 
+interface HomeCategory {
+  title: string;
+  emoji: string;
+  tracks: HomeTrack[];
+}
+
+interface HomeTrack {
+  id: string;
+  title: string;
+  artist: string;
+  album?: string;
+  duration: number;
+  url: string;
+  coverUrl: string;
+  genre: string;
+  description?: string;
+  isYoutube: boolean;
+  youtubeId: string;
+  views?: string;
+  likes?: string;
+  publishedAt?: string;
+  channelTitle?: string;
+}
+
+interface HomeData {
+  trending: HomeCategory;
+  popularPlaylists: HomeCategory;
+  topCharts: HomeCategory;
+  recentlyReleased: HomeCategory;
+  recommended: HomeCategory;
+  livePerformances: HomeCategory;
+  updatedAt: string | null;
+  message?: string;
+}
+
 interface HomeDashboardViewProps {
   onBrowseAll: () => void;
 }
 
+function formatViews(views: string | undefined): string {
+  if (!views) return '';
+  const num = parseInt(views, 10);
+  if (isNaN(num)) return views;
+  if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(1)}B`;
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
+  return num.toString();
+}
+
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function timeAgo(dateStr: string | undefined): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+  if (days < 365) return `${Math.floor(days / 30)} months ago`;
+  return `${Math.floor(days / 365)} years ago`;
+}
+
+const SECTION_ICONS: Record<string, React.ReactNode> = {
+  trending: <Flame className="text-orange-400" size={20} />,
+  popularPlaylists: <Music3 className="text-cyan-400" size={20} />,
+  topCharts: <TrendingUp className="text-green-400" size={20} />,
+  recentlyReleased: <Headphones className="text-purple-400" size={20} />,
+  recommended: <Star className="text-yellow-400" size={20} />,
+  livePerformances: <Mic className="text-pink-400" size={20} />,
+};
+
+const SECTION_COLORS: Record<string, string> = {
+  trending: 'from-orange-500/20 to-red-600/10',
+  popularPlaylists: 'from-cyan-500/20 to-blue-600/10',
+  topCharts: 'from-green-500/20 to-emerald-600/10',
+  recentlyReleased: 'from-purple-500/20 to-violet-600/10',
+  recommended: 'from-yellow-500/20 to-amber-600/10',
+  livePerformances: 'from-pink-500/20 to-rose-600/10',
+};
+
 export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({ onBrowseAll }) => {
-  const { playTrack, currentTrack, isPlaying, togglePlay, allTracks, allGenres, setShowDashboard } = useAudioPlayer();
+  const { playTrack, currentTrack, isPlaying, togglePlay, allTracks, setShowDashboard } = useAudioPlayer();
 
-  const POPULAR_PLAYLISTS = [
-    {
-      id: 'bollywood-vibes',
-      name: 'Bollywood & Sufi Hits',
-      description: 'A.R. Rahman classics, emotional guitar chords, and subcontinental acoustic magic.',
-      coverUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&auto=format&fit=crop&q=60',
-      trackIds: ['ar-rahman-dil-se-re', 'local-train-choo-lo', 'prateek-kuhad-cold-mess']
-    },
-    {
-      id: 'global-chart',
-      name: 'Global Chartbusters',
-      description: 'The Weeknd, Charlie Puth, DJ Snake, and international billboard chart toppers.',
-      coverUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=60',
-      trackIds: ['the-weeknd-blinding-lights', 'charlie-puth-how-long', 'dj-snake-let-me-love-you']
-    },
-    {
-      id: 'study-lofi',
-      name: 'Late Night Chill Lo-fi',
-      description: 'Analog tape crackles, cassettes, and comforting ambient focus tracks.',
-      coverUrl: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=500&auto=format&fit=crop&q=60',
-      trackIds: ['retro-vintage-mix', 'design-talks-podcast', 'space-station-deep-house']
-    },
-    {
-      id: 'deep-focuser',
-      name: 'Deep Focus Rave',
-      description: 'Hypnotic house progressions, laser pulses, and techno kicks.',
-      coverUrl: 'https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?w=500&auto=format&fit=crop&q=60',
-      trackIds: ['space-station-deep-house', 'club-life-electronic', 'live-ocean-stage']
+  const [homeData, setHomeData] = useState<HomeData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [trendingIndex, setTrendingIndex] = useState(0);
+
+  // Fetch home data from /api/home
+  const fetchHomeData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const res = await fetch('/api/home');
+      if (!res.ok) throw new Error(`Failed to load home data (${res.status})`);
+      const data: HomeData = await res.json();
+      setHomeData(data);
+    } catch (e: any) {
+      setError(e.message || 'Failed to load home data');
+      console.error('[HomeDashboard] Fetch error:', e);
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  }, []);
 
-  const handlePlayPlaylist = (trackIds: string[]) => {
-    const playlistTracks = allTracks.filter((t) => trackIds.includes(t.id));
-    if (playlistTracks.length > 0) {
-      const orderedTracks = trackIds
-        .map(id => playlistTracks.find(t => t.id === id))
-        .filter((t): t is Track => t !== undefined);
-      playTrack(orderedTracks[0], orderedTracks);
+  useEffect(() => {
+    fetchHomeData();
+  }, [fetchHomeData]);
+
+  // Auto-rotate trending hero every 10 seconds
+  useEffect(() => {
+    if (!homeData?.trending?.tracks?.length) return;
+    const interval = setInterval(() => {
+      setTrendingIndex(prev => (prev + 1) % Math.min(homeData.trending.tracks.length, 5));
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [homeData?.trending?.tracks?.length]);
+
+  // Convert HomeTrack to Track for playback
+  const homeTrackToTrack = (ht: HomeTrack): Track => ({
+    id: ht.id,
+    title: ht.title,
+    artist: ht.artist,
+    album: ht.album || 'YouTube Music',
+    duration: ht.duration,
+    url: ht.url,
+    coverUrl: ht.coverUrl,
+    genre: ht.genre || 'Music',
+    description: ht.description,
+    isYoutube: ht.isYoutube,
+    youtubeId: ht.youtubeId,
+  });
+
+  const handlePlayHomeTrack = (ht: HomeTrack, sectionTracks: HomeTrack[]) => {
+    const track = homeTrackToTrack(ht);
+    const queueTracks = sectionTracks.map(homeTrackToTrack);
+    if (currentTrack?.id === track.id) {
+      togglePlay();
+    } else {
+      playTrack(track, queueTracks);
     }
   };
 
-  const handlePlayById = (id: string) => {
-    const track = allTracks.find((t) => t.id === id);
-    if (track) {
-      if (currentTrack?.id === track.id) {
-        togglePlay();
-      } else {
-        playTrack(track, allTracks);
-      }
-    }
-  };
+  // Loading state
+  if (isLoading && !homeData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <Loader2 className="w-10 h-10 text-cyan-400 animate-spin" />
+        <p className="text-sm text-white/50 font-mono uppercase tracking-widest">Loading live dashboard...</p>
+      </div>
+    );
+  }
 
-  const getFeaturedTrack = (id: string): Track | undefined => {
-    return allTracks.find((t) => t.id === id);
-  };
+  // Error state
+  if (error && !homeData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <p className="text-sm text-red-400">{error}</p>
+        <button
+          onClick={fetchHomeData}
+          className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/15 rounded-full text-white text-sm transition-all cursor-pointer"
+        >
+          <RefreshCw size={14} />
+          Retry
+        </button>
+      </div>
+    );
+  }
 
-  const spaceStation = getFeaturedTrack('space-station-deep-house') || TRACKS[2];
-  const designTalks = getFeaturedTrack('design-talks-podcast') || TRACKS[3];
-  const clubLife = getFeaturedTrack('club-life-electronic') || TRACKS[1];
+  const trending = homeData?.trending?.tracks || [];
+  const heroTrack = trending[trendingIndex] || trending[0];
+  const sections = homeData ? [
+    { key: 'trending', data: homeData.trending },
+    { key: 'popularPlaylists', data: homeData.popularPlaylists },
+    { key: 'topCharts', data: homeData.topCharts },
+    { key: 'recentlyReleased', data: homeData.recentlyReleased },
+    { key: 'recommended', data: homeData.recommended },
+    { key: 'livePerformances', data: homeData.livePerformances },
+  ].filter(s => s.data?.tracks?.length > 0) : [];
 
   return (
     <div
       id="home-dashboard"
-      className="px-4 md:px-8 py-6 max-w-7xl mx-auto flex flex-col gap-12 pb-24 cursor-pointer"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          togglePlay();
-        }
-      }}
-      title={currentTrack?.isYoutube ? "Click background canvas to toggle video playback" : undefined}
+      className="px-4 md:px-8 py-6 max-w-7xl mx-auto flex flex-col gap-12 pb-24"
     >
-      {/* Dynamic welcome header */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-6">
-        <div>
-          <h2 className="font-headline-lg text-3xl md:text-4xl font-bold text-[#e5e2e3] flex items-center gap-2">
-            <span>Trending Now</span>
-            <Flame className="text-[#ff571a] animate-pulse" size={28} />
-          </h2>
-          <div className="flex items-center gap-3 flex-wrap mt-1">
-            <p className="text-xs text-[#b9cacb] font-label-mono uppercase tracking-widest">
-              Curated fresh every hour
-            </p>
-            {currentTrack?.isYoutube && (
+      {/* ═══ TRENDING HERO ═══ */}
+      {heroTrack && (
+        <section className="relative">
+          {/* Hero Banner */}
+          <div
+            className="relative h-72 md:h-[380px] rounded-3xl overflow-hidden group cursor-pointer border border-white/10 shadow-2xl"
+            onClick={() => handlePlayHomeTrack(heroTrack, trending)}
+          >
+            {/* Background image with transition */}
+            <div
+              className="absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-out group-hover:scale-[1.03]"
+              style={{ backgroundImage: `url(${heroTrack.coverUrl})` }}
+            />
+            {/* Darkening overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent z-10" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent z-10" />
+
+            {/* Top badge */}
+            <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
+              <div className="bg-orange-500/90 text-white font-bold text-[9px] uppercase tracking-widest px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 backdrop-blur-sm">
+                <Flame size={11} className="animate-pulse" />
+                TRENDING #{trendingIndex + 1}
+              </div>
+              {heroTrack.views && (
+                <div className="bg-black/50 backdrop-blur-md text-white/80 text-[9px] font-mono px-2.5 py-1 rounded-full flex items-center gap-1">
+                  <Eye size={10} />
+                  {formatViews(heroTrack.views)} views
+                </div>
+              )}
+            </div>
+
+            {/* Bottom info */}
+            <div className="absolute bottom-0 left-0 w-full p-6 md:p-8 z-20 flex justify-between items-end">
+              <div className="max-w-[75%]">
+                <p className="font-mono text-cyan-400 text-[10px] mb-1.5 uppercase tracking-widest flex items-center gap-1">
+                  <Music3 size={11} className="animate-spin" style={{ animationDuration: '8s' }} />
+                  <span>{heroTrack.channelTitle || heroTrack.artist}</span>
+                </p>
+                <h3 className="text-2xl md:text-4xl font-black text-white tracking-tight leading-tight drop-shadow-lg capitalize">
+                  {heroTrack.title}
+                </h3>
+                <div className="flex items-center gap-3 mt-2 text-white/60 text-xs">
+                  {heroTrack.duration > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Clock size={10} />
+                      {formatDuration(heroTrack.duration)}
+                    </span>
+                  )}
+                  {heroTrack.publishedAt && (
+                    <span className="flex items-center gap-1">
+                      <Calendar size={10} />
+                      {timeAgo(heroTrack.publishedAt)}
+                    </span>
+                  )}
+                  {heroTrack.likes && (
+                    <span className="flex items-center gap-1">
+                      <ThumbsUp size={10} />
+                      {formatViews(heroTrack.likes)}
+                    </span>
+                  )}
+                </div>
+              </div>
               <button
+                className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-cyan-400 hover:bg-cyan-300 text-black flex items-center justify-center shadow-[0_4px_20px_rgba(0,242,255,0.4)] transition-all duration-300 transform group-hover:scale-110 active:scale-95 cursor-pointer shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
-                  togglePlay();
+                  handlePlayHomeTrack(heroTrack, trending);
                 }}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] bg-[#00f2ff]/10 hover:bg-[#00f2ff]/20 text-[#00f2ff] border border-[#00f2ff]/30 font-mono font-bold transition-all cursor-pointer"
-                title="Click to play or pause the ambient background YouTube video feed instantly"
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${isPlaying ? 'bg-[#00f2ff] animate-ping' : 'bg-red-500'}`} />
-                Background Video: {isPlaying ? 'ACTIVE (Click to Pause)' : 'PAUSED (Click to Play)'}
+                {currentTrack?.id === heroTrack.id && isPlaying ? (
+                  <Pause size={22} fill="currentColor" />
+                ) : (
+                  <Play size={22} fill="currentColor" className="ml-1" />
+                )}
               </button>
-            )}
-          </div>
-        </div>
-        {/* Quick Access Navigation Pill Dock */}
-        <div className="flex items-center gap-1 bg-white/[0.04] border border-white/10 rounded-full p-1 shadow-lg select-none self-start md:self-auto shrink-0">
-          <button
-            onClick={() => {
-              setShowDashboard(false);
-            }}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-[0.12em] text-white/50 hover:text-white hover:bg-white/10 transition-all duration-300 cursor-pointer active:scale-95"
-            title="Go to Player"
-            id="dashboard-go-to-player-btn"
-          >
-            <Home className="w-3.5 h-3.5 text-pink-400" />
-            <span>Home</span>
-          </button>
-          <div className="w-px h-3 bg-white/10" />
-          <button
-            onClick={onBrowseAll}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-[0.12em] bg-pink-500/20 text-pink-400 hover:bg-pink-500/30 transition-all duration-300 cursor-pointer active:scale-95"
-            title="See all tracks"
-            id="dashboard-see-all-tracks-btn"
-          >
-            <Search className="w-3.5 h-3.5 text-pink-400" />
-            <span>See All</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Bento Grid */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="trending-bento-grid">
-        {/* Large Featured Card (Club Life) */}
-        <div
-          id="featured-bento-card-large"
-          className="lg:col-span-2 relative h-72 md:h-[350px] rounded-3xl overflow-hidden group cursor-pointer border border-white/5"
-          onClick={() => handlePlayById('club-life-electronic')}
-        >
-          <img
-            alt="Club Life Cover"
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
-            src={FEATURED_TRENDING_IMAGE}
-          />
-          {/* Top category label */}
-          <div className="absolute top-4 left-4 z-20 bg-[#ff571a] text-[#521300] font-bold font-label-mono text-[9px] uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">
-            LIVE PREMIERE
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0f] via-[#0e0e0f]/30 to-transparent z-10" />
-
-          {/* Bottom Card Labels */}
-          <div className="absolute bottom-0 left-0 w-full p-6 z-20 flex justify-between items-end backdrop-blur-[2px]">
-            <div>
-              <p className="font-label-mono text-[#00f2ff] text-[10px] mb-1.5 uppercase tracking-widest flex items-center gap-1">
-                <Music3 size={11} className="animate-spin" style={{ animationDuration: '8s' }} />
-                <span>POPULAR LIVE DJ SET</span>
-              </p>
-              <h3 className="font-headline-lg text-2xl md:text-3xl font-bold text-white tracking-tight">
-                Club Life: Electronic
-              </h3>
-              <p className="text-sm text-[#b9cacb] mt-1 font-medium">
-                DJ Phantom • Synth Lead Set
-              </p>
             </div>
-            <button
-              id="large-play-trigger"
-              className="w-14 h-14 rounded-full bg-[#00f2ff] hover:bg-[#74f5ff] text-[#00363a] flex items-center justify-center shadow-[0_4px_20px_rgba(0,242,255,0.4)] transition-all duration-300 transform group-hover:scale-110 active:scale-95 cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                handlePlayById('club-life-electronic');
-              }}
-            >
-              {currentTrack?.id === 'club-life-electronic' && isPlaying ? (
-                <Pause size={20} fill="currentColor" />
-              ) : (
-                <Play size={20} fill="currentColor" className="ml-1" />
-              )}
-            </button>
-          </div>
-        </div>
 
-        {/* Stacked Side items */}
-        <div className="flex flex-col gap-4 justify-between" id="bento-stacked-items">
-          {/* Card 1: Space Station */}
-          <div
-            id="mini-card-space-station"
-            onClick={() => handlePlayById(spaceStation.id)}
-            className="flex-1 relative rounded-2xl p-4 flex items-center gap-4 bg-[#201f20]/40 backdrop-blur-md border border-white/5 hover:bg-white/10 transition-all cursor-pointer group"
-          >
-            <div className="w-20 h-20 rounded-xl overflow-hidden relative shrink-0 border border-white/10">
-              <img
-                alt="Space Station"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                src={spaceStation.coverUrl}
-              />
-              <div className={`absolute inset-0 bg-black/45 flex items-center justify-center transition-opacity ${
-                currentTrack?.id === spaceStation.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-              }`}>
-                {currentTrack?.id === spaceStation.id && isPlaying ? (
-                  <Pause size={20} fill="currentColor" className="text-white" />
-                ) : (
-                  <Play size={20} fill="currentColor" className="text-white" />
-                )}
-              </div>
+            {/* Trending carousel dots */}
+            <div className="absolute bottom-6 right-6 z-20 flex items-center gap-1.5 md:hidden">
+              {trending.slice(0, 5).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => { e.stopPropagation(); setTrendingIndex(i); }}
+                  className={`rounded-full transition-all cursor-pointer ${
+                    i === trendingIndex
+                      ? 'w-6 h-2 bg-cyan-400'
+                      : 'w-2 h-2 bg-white/30 hover:bg-white/50'
+                  }`}
+                />
+              ))}
             </div>
-            <div className="flex-grow min-w-0 pr-1">
-              <div className="flex justify-between items-start gap-1">
-                <h4 className="font-bold text-white text-md truncate leading-snug">
-                  {spaceStation.title}
-                </h4>
-                <div onClick={(e) => e.stopPropagation()}>
-                  <SongActionsMenu track={spaceStation} />
+          </div>
+
+          {/* Trending carousel pills (desktop) */}
+          <HScroll className="hidden md:flex items-center gap-2 mt-4 pb-1">
+            {trending.slice(0, 8).map((t, i) => (
+              <button
+                key={t.id}
+                onClick={() => setTrendingIndex(i)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-300 cursor-pointer shrink-0 ${
+                  i === trendingIndex
+                    ? 'bg-cyan-400/15 border-cyan-400/40 text-white'
+                    : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <img src={t.coverUrl} alt={t.title} className="w-8 h-8 rounded-lg object-cover" />
+                <div className="text-left min-w-0">
+                  <p className="text-[10px] font-bold truncate max-w-[120px] capitalize">{t.title}</p>
+                  <p className="text-[8px] text-white/40 truncate">{t.artist}</p>
                 </div>
-              </div>
-              <p className="text-xs text-[#b9cacb] mt-0.5">{spaceStation.artist}</p>
-              <p className="font-label-mono text-[9px] text-[#ff571a] font-semibold mt-1 uppercase tracking-wider">
-                Deep House Groove
-              </p>
-              {/* Animated Progress wave bar preview */}
-              <div className="mt-3 flex items-center gap-2">
-                <div className="flex-grow h-1 bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full bg-[#00f2ff] rounded-full transition-all duration-300 ${
-                      currentTrack?.id === spaceStation.id && isPlaying ? 'w-[58%] animate-pulse' : 'w-[20%]'
-                    }`}
-                  />
-                </div>
-                <span className="font-label-mono text-[8.5px] text-[#b9cacb]">58% Playrate</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Design Talks */}
-          <div
-            id="mini-card-design-talks"
-            onClick={() => handlePlayById(designTalks.id)}
-            className="flex-1 relative rounded-2xl p-4 flex items-center gap-4 bg-[#201f20]/40 backdrop-blur-md border border-white/5 hover:bg-white/10 transition-all cursor-pointer group"
-          >
-            <div className="w-20 h-20 rounded-xl overflow-hidden relative shrink-0 border border-white/10">
-              <img
-                alt="Design Talks"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                src={designTalks.coverUrl}
-              />
-              <div className={`absolute inset-0 bg-black/45 flex items-center justify-center transition-opacity ${
-                currentTrack?.id === designTalks.id && isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-              }`}>
-                {currentTrack?.id === designTalks.id && isPlaying ? (
-                  <Pause size={20} fill="currentColor" className="text-white" />
-                ) : (
-                  <Play size={20} fill="currentColor" className="text-white" />
-                )}
-              </div>
-            </div>
-            <div className="flex-grow min-w-0 pr-1">
-              <div className="flex justify-between items-start gap-1">
-                <h4 className="font-bold text-white text-md truncate leading-snug">
-                  {designTalks.title}
-                </h4>
-                <div onClick={(e) => e.stopPropagation()}>
-                  <SongActionsMenu track={designTalks} />
-                </div>
-              </div>
-              <p className="text-xs text-[#b9cacb] mt-0.5">{designTalks.artist}</p>
-              <p className="font-label-mono text-[9px] text-[#e3d4ff] font-semibold mt-1 uppercase tracking-wider">
-                Creative Podcast
-              </p>
-              <div className="mt-3 text-[10px] text-[#b9cacb] italic truncate">
-                "Simple structure yields clean UI..."
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+              </button>
+            ))}
+          </HScroll>
+        </section>
+      )}
 
       <LyricsShowcase />
 
-      {/* Popular Curated Playlists */}
-      <section id="popular-playlists-section">
+      {/* ═══ DYNAMIC SECTIONS ═══ */}
+      {sections.map(({ key, data }) => {
+        // Skip trending from the grid sections — it has its own hero
+        if (key === 'trending') return null;
+
+        return (
+          <section key={key} id={`home-section-${key}`}>
+            {/* Section Header */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                {SECTION_ICONS[key] || <Sparkles className="text-white/50" size={20} />}
+                <div>
+                  <h3 className="text-xl md:text-2xl font-black text-white flex items-center gap-2">
+                    {data.emoji} {data.title}
+                  </h3>
+                  <p className="text-[10px] text-white/40 font-mono uppercase tracking-widest mt-0.5">
+                    {data.tracks.length} tracks • Live from YouTube
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Cards Horizontal Scroll */}
+            <HScroll>
+              {data.tracks.map((track) => (
+                <div
+                  key={track.id}
+                  onClick={() => handlePlayHomeTrack(track, data.tracks)}
+                  className={`group relative bg-gradient-to-br ${SECTION_COLORS[key] || 'from-white/5 to-white/[0.02]'} hover:from-white/10 hover:to-white/5 p-3.5 rounded-2xl border border-white/5 hover:border-white/15 transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[260px] w-[220px] md:w-[240px] shrink-0 snap-start shadow-lg backdrop-blur-sm`}
+                >
+                  {/* Cover Art */}
+                  <div className="relative aspect-video rounded-xl overflow-hidden border border-white/10 bg-black/30">
+                    <img
+                      alt={track.title}
+                      src={track.coverUrl || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=60'}
+                      className="w-full h-full object-cover group-hover:scale-[1.05] transition-transform duration-500"
+                      loading="lazy"
+                    />
+                    {/* Duration badge */}
+                    {track.duration > 0 && (
+                      <span className="absolute bottom-1.5 right-1.5 bg-black/70 backdrop-blur-md px-1.5 py-0.5 rounded text-[8px] font-mono font-bold text-white/90">
+                        {formatDuration(track.duration)}
+                      </span>
+                    )}
+                    {/* Play overlay */}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                      <div className="w-10 h-10 rounded-full bg-cyan-400 text-black flex items-center justify-center shadow-lg shadow-cyan-400/20 transform scale-90 group-hover:scale-100 transition-transform">
+                        {currentTrack?.id === track.id && isPlaying ? (
+                          <Pause size={14} fill="currentColor" />
+                        ) : (
+                          <Play size={14} fill="currentColor" className="ml-0.5" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Track Info */}
+                  <div className="flex flex-col gap-0.5 mt-3 flex-grow">
+                    <h4 className="font-bold text-white text-sm group-hover:text-cyan-300 transition-colors leading-snug line-clamp-2 capitalize">
+                      {track.title}
+                    </h4>
+                    <p className="text-[10px] text-white/50 truncate mt-0.5">
+                      {track.channelTitle || track.artist}
+                    </p>
+                  </div>
+
+                  {/* Stats Row */}
+                  <div className="border-t border-white/5 pt-2.5 mt-2 flex items-center justify-between text-[9px] text-white/40 font-mono">
+                    {track.views && (
+                      <span className="flex items-center gap-1">
+                        <Eye size={9} />
+                        {formatViews(track.views)}
+                      </span>
+                    )}
+                    {track.publishedAt && (
+                      <span className="flex items-center gap-1">
+                        <Calendar size={9} />
+                        {timeAgo(track.publishedAt)}
+                      </span>
+                    )}
+                    {!track.views && !track.publishedAt && (
+                      <span className="text-white/20">YouTube Music</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </HScroll>
+          </section>
+        );
+      })}
+
+      {/* ═══ BROWSE GENRES ═══ */}
+      <section id="browse-genres-list">
         <div className="flex flex-col gap-2 mb-6">
-          <h3 className="font-headline-lg text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
-            <span>Popular Playlists</span>
-            <span className="text-[10px] bg-[#00f2ff]/15 text-[#00f2ff] font-label-mono uppercase tracking-widest font-bold px-2 py-0.5 rounded-full">MUST LISTEN</span>
+          <h3 className="text-2xl md:text-3xl font-black text-white">
+            Browse Genres
           </h3>
-          <p className="text-xs text-[#b9cacb] font-label-mono uppercase tracking-widest mt-0.5">
-            Highly played sets tailored with deep premium vibes. Play to trigger full station queue instantly.
+          <p className="text-xs text-white/40 font-mono uppercase tracking-widest mt-0.5">
+            Tap a genre to explore curated YouTube streams
           </p>
         </div>
 
         <HScroll>
-          {POPULAR_PLAYLISTS.map((playlist) => (
+          {MUSIC_GENRES.map((genre) => (
             <div
-              key={playlist.id}
-              id={`playlist-card-${playlist.id}`}
-              onClick={() => handlePlayPlaylist(playlist.trackIds)}
-              className="group relative bg-[#201f20]/30 hover:bg-[#201f20]/60 p-4 rounded-2xl border border-white/5 hover:border-[#00f2ff]/25 transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[290px] w-[260px] md:w-[280px] shrink-0 snap-start shadow-lg"
+              key={genre.id}
+              id={`genre-card-${genre.id}`}
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('playme-navigate', {
+                  detail: { tab: 'genres', subtab: 'cloud', query: genre.query || genre.name }
+                }));
+              }}
+              className="rounded-2xl cursor-pointer group relative overflow-hidden aspect-[4/5] w-32 md:w-40 shrink-0 snap-start transition-all duration-500 hover:scale-105 hover:-translate-y-1 border border-white/5"
             >
-              <div className="flex flex-col gap-3">
-                {/* Playlist Art Cover */}
-                <div className="relative aspect-video rounded-xl overflow-hidden border border-white/10 shrink-0 bg-neutral-900">
-                  <img
-                    alt={playlist.name}
-                    src={playlist.coverUrl}
-                    className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500"
-                  />
-                  {/* Floating badge count */}
-                  <span className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded text-[9px] font-mono font-bold text-[#00f2ff]">
-                    {playlist.trackIds.length} tracks
-                  </span>
-                  {/* On hover play button overlay */}
-                  <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                    <div className="w-11 h-11 rounded-full bg-[#00f2ff] text-black flex items-center justify-center shadow-lg shadow-[#00f2ff]/20 transform scale-90 group-hover:scale-100 transition-transform">
-                      <Play size={16} fill="currentColor" className="ml-0.5" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Info Text */}
-                <div className="flex flex-col gap-1">
-                  <h4 className="font-headline font-bold text-white text-md group-hover:text-[#00f2ff] transition-colors">
-                    {playlist.name}
-                  </h4>
-                  <p className="text-xs text-[#b9cacb] leading-relaxed line-clamp-2">
-                    {playlist.description}
-                  </p>
-                </div>
-              </div>
-
-              {/* Tracks badge sequence */}
-              <div className="border-t border-white/5 pt-3.5 mt-2.5 flex items-center justify-between">
-                <span className="text-[9px] text-[#b9cacb] font-label-mono uppercase tracking-widest font-semibold">
-                  Station Stream
-                </span>
-                <span className="text-[9.5px] bg-[#ff571a]/10 text-[#ff8056] px-2 py-0.5 rounded-full font-semibold font-mono">
-                  🔥 {92 + Math.floor(playlist.name.length * 1.5)}k plays
-                </span>
+              <img
+                alt={genre.name}
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                src={genre.image}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-3 text-center">
+                <h3 className="text-sm font-bold text-white tracking-wide">
+                  {genre.name}
+                </h3>
               </div>
             </div>
           ))}
         </HScroll>
       </section>
 
-      {/* Genres / Asymmetric Cards */}
-      <section id="browse-genres-list">
-        <div className="flex flex-col gap-2 mb-6">
-          <h3 className="font-headline-lg text-2xl md:text-3xl font-bold text-white">
-            Browse Genres
-          </h3>
-          <p className="text-xs text-[#b9cacb] font-label-mono uppercase tracking-widest mt-0.5">
-            Tap a genre to stream active featured track
-          </p>
+      {/* Last Updated */}
+      {homeData?.updatedAt && (
+        <div className="text-center text-[9px] text-white/20 font-mono uppercase tracking-widest pb-4">
+          Dashboard data updated {timeAgo(homeData.updatedAt)} • Live from YouTube
         </div>
-
-        <HScroll>
-          {MUSIC_GENRES.map((genre) => (
-              <div
-                key={genre.id}
-                id={`genre-card-${genre.id}`}
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('playme-navigate', { 
-                    detail: { tab: 'genres', subtab: 'cloud', query: genre.query || genre.name } 
-                  }));
-                }}
-                className="rounded-2xl cursor-pointer group relative overflow-hidden aspect-[4/5] w-32 md:w-40 shrink-0 snap-start transition-all duration-500 hover:scale-105 hover:-translate-y-1 border border-white/5"
-              >
-                <img
-                  alt={genre.name}
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                  src={genre.image}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-3 text-center">
-                  <h3 className="font-headline text-sm font-bold text-white tracking-wide">
-                    {genre.name}
-                  </h3>
-                </div>
-              </div>
-            ))}
-        </HScroll>
-      </section>
+      )}
     </div>
   );
 };

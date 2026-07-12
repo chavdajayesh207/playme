@@ -17,6 +17,7 @@ import ytSearch from "yt-search";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { userDb } from "./server-user-db";
+import cron from 'node-cron';
 
 dotenv.config();
 
@@ -781,6 +782,218 @@ app.get("/api/youtube/channel-avatar", async (req, res) => {
     return res.redirect(`https://api.dicebear.com/9.x/micah/svg?seed=${encodeURIComponent(channelName)}&backgroundColor=transparent&baseColor=f9a8d4,fcd34d,86efac,93c5fd&mouth=smile,laughing`);
   }
 });
+
+// ==========================================
+// HOME DASHBOARD — Live YouTube Data with 6-Hour Cron
+// ==========================================
+
+interface HomeCategory {
+  title: string;
+  emoji: string;
+  tracks: any[];
+}
+
+interface HomeData {
+  trending: HomeCategory;
+  popularPlaylists: HomeCategory;
+  topCharts: HomeCategory;
+  recentlyReleased: HomeCategory;
+  recommended: HomeCategory;
+  livePerformances: HomeCategory;
+  updatedAt: string;
+}
+
+const HOME_CATEGORIES: { key: string; title: string; emoji: string; query: string }[] = [
+  { key: 'trending', title: 'Trending Now', emoji: '🔥', query: '' }, // special: uses chart=mostPopular
+  { key: 'popularPlaylists', title: 'Popular Playlists', emoji: '🎵', query: 'Best Music Playlists 2025' },
+  { key: 'topCharts', title: 'Top Charts', emoji: '📈', query: 'Top Hits Music 2025' },
+  { key: 'recentlyReleased', title: 'Recently Released', emoji: '🎧', query: 'New Music Releases This Week' },
+  { key: 'recommended', title: 'Recommended For You', emoji: '⭐', query: 'Best Songs All Time Music Mix' },
+  { key: 'livePerformances', title: 'Live Performances', emoji: '🎤', query: 'Best Live Music Performance Concert' },
+];
+
+async function fetchTrendingVideos(): Promise<any[]> {
+  try {
+    const url = `https://youtube.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&chart=mostPopular&regionCode=US&videoCategoryId=10&maxResults=25&key=${YOUTUBE_API_KEY}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.warn('[Home Updater] Trending fetch failed:', res.status);
+      return [];
+    }
+    const data = await res.json();
+    return (data.items || []).map((item: any) => {
+      const durSec = serverParseISO8601Duration(item.contentDetails?.duration || '');
+      return {
+        id: `yt-${item.id}`,
+        title: serverCleanTitle(item.snippet?.title || ''),
+        artist: serverCleanArtistName(item.snippet?.channelTitle || 'Unknown'),
+        album: 'Trending',
+        duration: durSec,
+        url: `https://www.youtube.com/watch?v=${item.id}`,
+        coverUrl: item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.medium?.url || '',
+        genre: 'Trending',
+        description: item.snippet?.description || '',
+        isYoutube: true,
+        youtubeId: item.id,
+        views: item.statistics?.viewCount || '0',
+        likes: item.statistics?.likeCount || '0',
+        publishedAt: item.snippet?.publishedAt || '',
+        channelTitle: item.snippet?.channelTitle || '',
+      };
+    });
+  } catch (e) {
+    console.error('[Home Updater] Error fetching trending:', e);
+    return [];
+  }
+}
+
+async function fetchCategoryVideos(query: string, maxResults: number = 15): Promise<any[]> {
+  try {
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${maxResults}&q=${encodeURIComponent(query)}&type=video&videoCategoryId=10&key=${YOUTUBE_API_KEY}`;
+    const searchRes = await fetch(searchUrl);
+    if (!searchRes.ok) {
+      console.warn(`[Home Updater] Category search failed for "${query}":`, searchRes.status);
+      return [];
+    }
+    const searchData = await searchRes.json();
+    const items = searchData.items || [];
+    if (items.length === 0) return [];
+
+    // Get video details for duration and stats
+    const videoIds = items.map((item: any) => item.id.videoId).join(',');
+    const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${videoIds}&key=${YOUTUBE_API_KEY}`;
+    
+    let statsMap: Record<string, any> = {};
+    try {
+      const detailsRes = await fetch(detailsUrl);
+      if (detailsRes.ok) {
+        const detailsData = await detailsRes.json();
+        (detailsData.items || []).forEach((item: any) => {
+          statsMap[item.id] = {
+            duration: serverParseISO8601Duration(item.contentDetails?.duration || ''),
+            views: item.statistics?.viewCount || '0',
+            likes: item.statistics?.likeCount || '0',
+          };
+        });
+      }
+    } catch (e) {
+      console.warn('[Home Updater] Stats fetch failed, continuing without stats');
+    }
+
+    return items.map((item: any) => {
+      const videoId = item.id.videoId;
+      const stats = statsMap[videoId] || {};
+      return {
+        id: `yt-${videoId}`,
+        title: serverCleanTitle(item.snippet?.title || ''),
+        artist: serverCleanArtistName(item.snippet?.channelTitle || 'Unknown'),
+        album: 'YouTube Music',
+        duration: stats.duration || 210,
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+        coverUrl: item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.medium?.url || '',
+        genre: 'Music',
+        description: item.snippet?.description || '',
+        isYoutube: true,
+        youtubeId: videoId,
+        views: stats.views || '0',
+        likes: stats.likes || '0',
+        publishedAt: item.snippet?.publishedAt || '',
+        channelTitle: item.snippet?.channelTitle || '',
+      };
+    });
+  } catch (e) {
+    console.error(`[Home Updater] Error fetching category "${query}":`, e);
+    return [];
+  }
+}
+
+async function updateHomeData() {
+  console.log('[Home Updater] 🔄 Starting scheduled home data update...');
+  const startTime = Date.now();
+
+  try {
+    // 1. Fetch Trending (uses special Videos API with chart=mostPopular)
+    const trending = await fetchTrendingVideos();
+    console.log(`[Home Updater] ✅ Trending: ${trending.length} tracks`);
+
+    // 2. Fetch other categories in sequence to avoid rate limiting
+    const results: Record<string, any[]> = { trending };
+    
+    for (const cat of HOME_CATEGORIES) {
+      if (cat.key === 'trending') continue; // already fetched
+      const tracks = await fetchCategoryVideos(cat.query);
+      results[cat.key] = tracks;
+      console.log(`[Home Updater] ✅ ${cat.title}: ${tracks.length} tracks`);
+      // Small delay between requests to be kind to API
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    const homeData: HomeData = {
+      trending: { title: 'Trending Now', emoji: '🔥', tracks: results.trending || [] },
+      popularPlaylists: { title: 'Popular Playlists', emoji: '🎵', tracks: results.popularPlaylists || [] },
+      topCharts: { title: 'Top Charts', emoji: '📈', tracks: results.topCharts || [] },
+      recentlyReleased: { title: 'Recently Released', emoji: '🎧', tracks: results.recentlyReleased || [] },
+      recommended: { title: 'Recommended For You', emoji: '⭐', tracks: results.recommended || [] },
+      livePerformances: { title: 'Live Performances', emoji: '🎤', tracks: results.livePerformances || [] },
+      updatedAt: new Date().toISOString(),
+    };
+
+    serverDb.setHomeCache(homeData);
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`[Home Updater] 🎉 Home data updated successfully in ${elapsed}s`);
+  } catch (e) {
+    console.error('[Home Updater] ❌ Failed to update home data:', e);
+  }
+}
+
+// Schedule: run every 6 hours
+cron.schedule('0 */6 * * *', () => {
+  console.log('[Cron] ⏰ Scheduled home data update triggered');
+  updateHomeData();
+});
+
+// Also run on server startup if cache is empty or older than 6 hours
+(async () => {
+  const existingCache = serverDb.getHomeCache();
+  if (!existingCache || !existingCache.updatedAt) {
+    console.log('[Home Updater] No existing cache found, fetching initial data...');
+    await updateHomeData();
+  } else {
+    const cacheAge = Date.now() - new Date(existingCache.updatedAt).getTime();
+    const SIX_HOURS = 6 * 60 * 60 * 1000;
+    if (cacheAge > SIX_HOURS) {
+      console.log('[Home Updater] Cache is stale (>6 hours), refreshing...');
+      await updateHomeData();
+    } else {
+      console.log(`[Home Updater] Cache is fresh (${(cacheAge / 60000).toFixed(0)} minutes old), skipping initial fetch.`);
+    }
+  }
+})();
+
+// GET /api/home — Serve cached home dashboard data
+app.get('/api/home', (req, res) => {
+  const homeData = serverDb.getHomeCache();
+  if (!homeData) {
+    return res.json({
+      trending: { title: 'Trending Now', emoji: '🔥', tracks: [] },
+      popularPlaylists: { title: 'Popular Playlists', emoji: '🎵', tracks: [] },
+      topCharts: { title: 'Top Charts', emoji: '📈', tracks: [] },
+      recentlyReleased: { title: 'Recently Released', emoji: '🎧', tracks: [] },
+      recommended: { title: 'Recommended For You', emoji: '⭐', tracks: [] },
+      livePerformances: { title: 'Live Performances', emoji: '🎤', tracks: [] },
+      updatedAt: null,
+      message: 'Home data is being loaded for the first time. Refresh in a moment.',
+    });
+  }
+  return res.json(homeData);
+});
+
+// POST /api/home/refresh — Force refresh home data (admin use)
+app.post('/api/home/refresh', async (req, res) => {
+  await updateHomeData();
+  return res.json({ success: true, message: 'Home data refreshed', updatedAt: new Date().toISOString() });
+});
+
 // ==========================================
 // 1. GET /api/songs -> Return combined live data through API
 app.get("/api/songs", (req, res) => {
@@ -1182,7 +1395,7 @@ app.get("/api/lyrics/synced", async (req, res) => {
 // ==========================================
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 
-// Multi-model resilience retry utility - switched to OpenAI for flawless recommendations
+// Multi-model resilience retry utility - switched to local Ollama for free, unlimited recommendations
 async function generateContentWithRetry(params: {
   contents: any;
   config?: any;
@@ -1196,29 +1409,35 @@ async function generateContentWithRetry(params: {
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      console.log(`[AI Routing] Dispatching OpenAI request (Attempt ${attempt})...`);
+      console.log(`[AI Routing] Dispatching Ollama request (Attempt ${attempt})...`);
       const body: any = {
-        model: "gpt-4o-mini", // Fast, accurate model for recommendations
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
+        model: "llama3.2:3b", // Fast, local model available on your machine
+        prompt: prompt,
+        stream: false,
+        options: {
+          temperature: 0.7
+        }
       };
 
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      if (isJson) {
+         body.format = "json"; // Force JSON output in Ollama
+      }
+
+      const res = await fetch("http://127.0.0.1:11434/api/generate", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${OPENAI_API_KEY}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify(body)
       });
 
       if (!res.ok) {
         const errText = await res.text();
-        throw new Error(`OpenAI API error: ${res.status} ${errText}`);
+        throw new Error(`Ollama API error: ${res.status} ${errText}`);
       }
 
       const data = await res.json();
-      let text = data.choices[0].message.content;
+      let text = data.response;
       
       // Cleanup markdown if the model hallucinated it despite instructions
       if (isJson) {
@@ -1227,11 +1446,11 @@ async function generateContentWithRetry(params: {
 
       return { text };
     } catch (err: any) {
-      console.log(`[AI Routing] OpenAI request failed (${err.message}). Retrying...`);
+      console.log(`[AI Routing] Ollama request failed (${err.message}). Retrying...`);
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
   }
-  throw new Error("Failed to generate content after retries using OpenAI API");
+  throw new Error("Failed to generate content after retries using Ollama API");
 }
 
 // YouTube Downloader API route

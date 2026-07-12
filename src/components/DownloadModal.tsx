@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Download, Loader2, CheckCircle } from 'lucide-react';
-import { Track, useAudioPlayer } from './AudioPlayerContext';
+import { useAudioPlayer } from './AudioPlayerContext';
+import { Track } from '../types';
 import { useAuth } from './AuthContext';
 
 interface DownloadModalProps {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAudioPlayer } from './AudioPlayerContext';
 import { useAuth } from './AuthContext';
 import { Track } from '../types';
-import { Search, ShoppingCart, ArrowLeft, Home, Music, List, User, Folder, Mic, MoreVertical, Bell, Download, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, EyeOff, AlignLeft, ScrollText, Clock, Minus, Plus, RotateCcw, Repeat, Share2, Camera, Activity, Zap, Crown } from 'lucide-react';
+import { Search, ShoppingCart, ArrowLeft, Home, Music, List, User, Folder, Mic, MoreVertical, Bell, Download, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, EyeOff, AlignLeft, ScrollText, Clock, Minus, Plus, RotateCcw, Repeat, Share2, Camera, Activity, Zap, Crown, ChevronDown, Shuffle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LiveStageView } from './LiveStageView';
 import { DiscoverView } from './DiscoverView';
@@ -60,6 +60,8 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
     setShowDashboard,
     isRepeat,
     toggleRepeat,
+    isShuffle,
+    toggleShuffle,
     queue,
     favoriteIds,
     isAutoplay,
@@ -70,6 +72,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
     continueMyMood,
     audioQuality,
     setAudioQuality,
+    setPlaceholderRect,
   } = useAudioPlayer();
 
   const [activeTab, setActiveTab] = useState<TabletTab>(TabletTab.HOME);
@@ -86,6 +89,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
   const homePlayerScrollRef = React.useRef<HTMLDivElement>(null);
   const dashboardScrollRef = React.useRef<HTMLDivElement>(null);
   const otherTabsScrollRef = React.useRef<HTMLDivElement>(null);
+  const lyricsImageRef = React.useRef<HTMLImageElement>(null);
 
   useEffect(() => {
     if (homePlayerScrollRef.current) {
@@ -616,6 +620,44 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
   const activeLyric = tracksLyrics[activeLyricIndex];
   const nextLyric = tracksLyrics[activeLyricIndex + 1];
 
+  // Automatically exit lyric mode if there are no lyrics available for the current track
+  useEffect(() => {
+    if (lyricMode !== 'off' && !isLoadingLyrics && tracksLyrics.length === 0) {
+      setLyricMode('off');
+      if (videoOpacity === 0.12) setVideoOpacity(1.0);
+    }
+  }, [lyricMode, isLoadingLyrics, tracksLyrics.length, videoOpacity, setVideoOpacity]);
+
+  // Sync YouTube Video into Immersive Lyrics Panel
+  useEffect(() => {
+    if (lyricMode !== 'off' && isYtActive) {
+      const el = lyricsImageRef.current;
+      if (!el) return;
+
+      const updateRect = () => {
+        if (lyricsImageRef.current) {
+          setPlaceholderRect(lyricsImageRef.current.getBoundingClientRect());
+        }
+      };
+
+      // Ensure rect is updated immediately, on resize, and on scroll
+      updateRect();
+      const observer = new ResizeObserver(updateRect);
+      observer.observe(el);
+      window.addEventListener('resize', updateRect);
+      window.addEventListener('scroll', updateRect, true);
+      
+      return () => {
+        observer.disconnect();
+        window.removeEventListener('resize', updateRect);
+        window.removeEventListener('scroll', updateRect, true);
+        setPlaceholderRect(null);
+      };
+    } else {
+      setPlaceholderRect(null);
+    }
+  }, [lyricMode, isYtActive, setPlaceholderRect]);
+
   // Lyrics source label for badge
   const getLyricsSourceLabel = () => {
     switch (lyricsResult.source) {
@@ -628,11 +670,19 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
     }
   };
 
-  // Auto-scroll lyrics in scroll mode
+  // Auto-scroll lyrics in scroll mode (Amazon Music-style centering)
   useEffect(() => {
     if (lyricMode !== 'scroll' || !lyricsScrollRef.current) return;
-    const activeEl = lyricsScrollRef.current.querySelector('[data-lyric-active="true"]');
-    if (activeEl) activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const activeEl = lyricsScrollRef.current.querySelector('[data-lyric-active="true"]') as HTMLElement;
+    if (activeEl) {
+      const container = lyricsScrollRef.current;
+      const containerHeight = container.clientHeight;
+      const lineHeight = activeEl.offsetHeight;
+      container.scrollTo({
+        top: activeEl.offsetTop - containerHeight / 2 + lineHeight / 2,
+        behavior: 'smooth'
+      });
+    }
   }, [activeLyricIndex, lyricMode]);
 
   // Adaptive overlay strength based on video opacity
@@ -698,14 +748,16 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
       </div>
 
         {/* Top Header Navigation — Logo left, Search center, Premium right */}
-        <nav className={`relative z-[35] flex items-center justify-between px-6 md:px-8 py-4 md:py-5 shrink-0 gap-4 ${isPodcastPlayerActive ? 'pointer-events-none' : ''}`}>
+        <nav className={`relative z-[35] flex items-center justify-between px-6 md:px-8 py-4 md:py-5 shrink-0 gap-4 transition-opacity duration-500 ${isPodcastPlayerActive ? 'pointer-events-none' : ''} ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           {/* LEFT: PlayMe Logo */}
           <div 
             onClick={() => {
               handleTabChange(TabletTab.HOME);
               setShowDashboard(false);
+              setLyricMode('off');
+              if (videoOpacity === 0.12) setVideoOpacity(1.0);
             }}
-            className="flex items-center space-x-2 cursor-pointer group shrink-0 pointer-events-auto"
+            className={`flex items-center space-x-2 cursor-pointer group shrink-0 ${lyricMode !== 'off' ? 'pointer-events-none' : 'pointer-events-auto'}`}
             title="Playme Player"
           >
             <Logo size={32} theme="dark" animate />
@@ -713,7 +765,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
           </div>
 
           {/* CENTER: Spotify-style Search Bar */}
-          <div className="flex-1 max-w-lg mx-auto px-2 pointer-events-auto">
+          <div className={`flex-1 max-w-lg mx-auto px-2 ${lyricMode !== 'off' ? 'pointer-events-none' : 'pointer-events-auto'}`}>
             <div className="search-bar-spotify flex items-center px-4 py-2.5 w-full">
               <Search className="w-4 h-4 text-gray-400 shrink-0" />
               <input 
@@ -745,7 +797,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
         {/* Content Area */}
         <div className="relative z-10 flex-grow flex h-full px-6 md:px-8 items-center overflow-hidden">
           {/* Left Vertical Sidenav Icons Bar */}
-          <aside className="fixed left-6 md:left-8 top-1/2 -translate-y-1/2 flex flex-col justify-center z-50 pointer-events-auto">
+          <aside className={`fixed left-6 md:left-8 top-1/2 -translate-y-1/2 flex flex-col justify-center z-50 pointer-events-auto transition-opacity duration-500 ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <div className="mb-4">
               <button 
                 onClick={() => {
@@ -897,6 +949,20 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                     className={`flex-grow h-full pr-1.5 custom-scroll scroll-smooth w-full relative ${
                       lyricMode === 'off' ? 'overflow-y-auto pb-24' : 'overflow-hidden pb-4'
                     }`}
+                    onClick={(e) => {
+                      if (lyricMode !== 'off') return;
+                      const target = e.target as HTMLElement;
+                      // Ignore clicks on functional buttons or interactive areas
+                      if (target.closest('button, a, input, [role="button"], .playback-bar, #artist-carousel, .song-actions-menu, .lyric-mode-pill')) return;
+                      
+                      // Do nothing if no lyrics are available
+                      if (!isLoadingLyrics && tracksLyrics.length === 0) return;
+                      
+                      setLyricMode('scroll');
+                      if (currentTrack?.isYoutube) {
+                        setVideoOpacity(0.12);
+                      }
+                    }}
                   >
                   <style>{`
                     #home-player-scroll-container::-webkit-scrollbar {
@@ -915,22 +981,22 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                   `}</style>
 
                   {/* FIRST FOLD: The player UI itself */}
-                  <div className={`min-h-[calc(100vh-140px)] flex flex-col justify-between w-full pb-8 ${
+                  <div className={`h-[calc(100vh-140px)] min-h-[calc(100vh-140px)] max-h-[calc(100vh-140px)] flex flex-col justify-between w-full pb-8 ${
                     lyricMode === 'off' ? 'pt-12 md:pt-16' : 'pt-2.5 md:pt-4'
                   }`}>
                     {/* Left Controller Panel occupies full width space */}
-                    <div className="flex flex-col justify-end h-full w-full transition-all duration-300 flex-grow pb-4">
+                    <div className={`flex flex-col h-full w-full transition-all duration-300 flex-grow min-h-0 pb-4 ${lyricMode === 'off' ? 'justify-end' : 'justify-start'}`}>
                       {/* Tagline */}
-                      <div className={lyricMode === 'off' ? 'mt-10 md:mt-16' : 'mt-2 md:mt-3'}>
+                      <div className={`flex flex-col h-full min-h-0 ${lyricMode === 'off' ? 'mt-10 md:mt-16 justify-end' : 'mt-2 md:mt-3 flex-grow'}`}>
                         {!isYtActive && (
                           <span className="uppercase tracking-widest text-[9px] font-bold text-pink-500 mb-1 block animate-pulse">
                             Hot Music • Playme Live
                           </span>
                         )}
                         {currentTrack && (
-                          <div className={`flex flex-col space-y-3 ${lyricMode === 'off' ? 'w-full max-w-none' : 'max-w-2xl'}`}>
+                          <div className={`flex flex-col space-y-3 flex-grow min-h-0 ${lyricMode === 'off' ? 'w-full max-w-none justify-end' : 'w-full max-w-none h-full justify-start'}`}>
                             {lyricMode === 'off' && !isYtActive && (
-                              <div className="w-full flex justify-center py-6 md:py-10 animate-floating">
+                              <div className="w-full flex justify-center py-6 md:py-10 animate-floating shrink-0">
                                 <div className="relative group select-none">
                                   {/* Soft ambient glow behind cover */}
                                   <div 
@@ -945,138 +1011,231 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                               </div>
                             )}
 
-                            {/* ===== LYRICS SECTION — 3 Instagram-Style Modes ===== */}
+                            {/* ===== IMMERSIVE LYRICS — Amazon Music Style Full Screen Overlay ===== */}
                             {lyricMode !== 'off' && (isLoadingLyrics || tracksLyrics.length > 0) && (
-                              <div className="w-full py-2.5 flex flex-col gap-2 relative overflow-hidden transition-all duration-300"
-                                style={{ minHeight: lyricMode === 'scroll' ? '200px' : '110px', maxHeight: lyricMode === 'scroll' ? '260px' : 'auto' }}
+                              <div className="fixed inset-0 z-[35] bg-black overflow-hidden flex flex-col animate-fade-in"
+                                onClick={(e) => {
+                                  const target = e.target as HTMLElement;
+                                  
+                                  // Ignore clicks on functional buttons or interactive areas
+                                  if (target.closest('button, a, input, [role="button"], .playback-bar, .lyric-immersive-line, .lyric-immersive-next, .song-actions-menu, .lyric-mode-pill, .lyric-sync-controller')) return;
+                                  
+                                  // Ignore if clicking the scrollbar of the lyrics container
+                                  if (target.classList.contains('lyrics-immersive-scroll') && e.clientX >= target.getBoundingClientRect().right - 20) {
+                                    return;
+                                  }
+
+                                  setLyricMode('off');
+                                  if (videoOpacity === 0.12) setVideoOpacity(1.0);
+                                }}
                               >
-                                {/* SCROLL MODE — Full lyrics sheet with active line highlighted */}
-                                {lyricMode === 'scroll' && (
-                                  <div ref={lyricsScrollRef} className="lyrics-scroll-container overflow-y-auto pl-4 pr-2 pt-6 flex flex-col gap-1.5" style={{ maxHeight: '220px' }}>
-                                    {tracksLyrics.map((line, idx) => {
-                                      const isActive = idx === activeLyricIndex;
-                                      const isPast = idx < activeLyricIndex;
-                                      return (
-                                        <p
-                                          key={idx}
-                                          data-lyric-active={isActive ? 'true' : 'false'}
-                                          onClick={() => seek(line.time)}
-                                          className={`text-sm md:text-base font-semibold cursor-pointer transition-all duration-300 select-none leading-relaxed ${
-                                            isActive
-                                              ? `text-[#00f2ff] ${getLyricGlowClass()} lyric-scroll-active text-base md:text-lg font-black scale-[1.02] origin-left`
-                                              : isPast
-                                                ? 'text-white/25'
-                                                : 'text-white/50 hover:text-white/70'
-                                          }`}
-                                        >
-                                          {line.text}
-                                        </p>
-                                      );
-                                    })}
-                                  </div>
-                                )}
+                                {/* Amazon Music style blurred background */}
+                                <div 
+                                  className="absolute inset-0 bg-cover bg-center"
+                                  style={{ 
+                                    backgroundImage: `url(${currentTrack.coverUrl || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=60'})`,
+                                    transform: 'scale(1.15)',
+                                    filter: 'blur(48px) brightness(0.75) saturate(1.15)'
+                                  }}
+                                />
+                                {/* Amazon Music style darkening overlay gradient (darker on right for lyrics) */}
+                                <div 
+                                  className="absolute inset-0"
+                                  style={{ background: 'linear-gradient(90deg, rgba(0,0,0,0.20), rgba(0,0,0,0.55))' }} 
+                                />
 
-                                {/* LINE MODE — Current + next line */}
-                                {lyricMode === 'line' && (
-                                  <div className="flex flex-col gap-2 justify-center min-h-[80px]">
-                                    <p key={activeLyricIndex} className={`text-lg md:text-2xl font-black text-[#00f2ff] ${getLyricGlowClass()} leading-relaxed font-sans select-none lyric-line-active`}>
-                                      {activeLyric ? (
-                                        <WordByWordLine
-                                          text={activeLyric.text}
-                                          startTime={activeLyric.time}
-                                          endTime={nextLyric ? nextLyric.time : duration}
-                                          currentTime={currentTime + lyricsOffset}
-                                          glowClass={getLyricGlowClass()}
-                                        />
-                                      ) : (
-                                        isLoadingLyrics ? "✨ Loading lyrics..." : ""
-                                      )}
-                                    </p>
-                                    {nextLyric && (
-                                      <p className={`text-xs md:text-sm italic font-semibold tracking-wide transition-all duration-300 select-none ${isYtActive ? 'text-white/60 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]' : 'text-white/40'}`}>
-                                        Up Next: {nextLyric.text}
-                                      </p>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Song Title + Artist — BELOW lyrics card */}
-                            <div className="flex flex-col space-y-1 text-left min-w-0">
-                              <p className={`text-[10px] font-mono uppercase tracking-widest text-pink-500 animate-pulse ${isYtActive ? 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]' : ''}`}>Now Playing</p>
-                              <div className="flex items-center gap-3 flex-wrap">
-                                <h2 className={`text-base md:text-lg font-extrabold text-white select-none capitalize tracking-tight leading-tight truncate ${isYtActive ? 'drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]' : ''}`}>
-                                  {(currentTrack.title || '').toUpperCase()}
-                                  <span className="text-white/40 font-normal lowercase italic px-1.5">by</span>
-                                  <span className={`text-[#00f2ff] ${isYtActive ? 'drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)] text-shadow-sm' : 'drop-shadow-[0_0_8px_rgba(0,242,255,0.3)]'}`}>{currentTrack.artist || 'Unknown'}</span>
-                                </h2>
-                                <SongActionsMenu track={currentTrack} />
-
-                                {/* Instagram-style Lyric Mode Toggle Pill — ALWAYS immediately following! */}
-                                <div className="lyric-mode-pill flex bg-black/50 border border-white/10 rounded-full p-0.5 select-none shrink-0 ml-1">
-                                  <button
-                                    onClick={() => setLyricMode('off')}
-                                    className={`p-1.5 rounded-full transition-all cursor-pointer ${lyricMode === 'off' ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white/70'}`}
-                                    title="Lyrics Off"
+                                {/* Top Bar: Close Button (Chevron Down) */}
+                                <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-50">
+                                  <button onClick={() => {
+                                      setLyricMode('off');
+                                      if (videoOpacity === 0.12) setVideoOpacity(1.0);
+                                    }} 
+                                    className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-white/70 hover:text-white transition-all backdrop-blur-md cursor-pointer"
                                   >
-                                    <EyeOff size={11} />
-                                  </button>
-                                  <button
-                                    onClick={() => setLyricMode('line')}
-                                    className={`p-1.5 rounded-full transition-all cursor-pointer ${lyricMode === 'line' ? 'bg-[#00f2ff]/20 text-[#00f2ff]' : 'text-white/40 hover:text-white/70'}`}
-                                    title="Line-by-Line Lyrics"
-                                  >
-                                    <AlignLeft size={11} />
-                                  </button>
-                                  <button
-                                    onClick={() => setLyricMode('scroll')}
-                                    className={`p-1.5 rounded-full transition-all cursor-pointer ${lyricMode === 'scroll' ? 'bg-[#00f2ff]/20 text-[#00f2ff]' : 'text-white/40 hover:text-white/70'}`}
-                                    title="Full Scrolling Lyrics"
-                                  >
-                                    <ScrollText size={11} />
+                                    <ChevronDown size={28} />
                                   </button>
                                 </div>
 
-                                {/* Sync Offset Calibration Adjustment Controller */}
-                                {lyricMode !== 'off' && (
-                                  <div className="flex items-center gap-1 bg-black/50 border border-white/10 rounded-full p-0.5 select-none shrink-0 ml-1 text-white/60">
-                                    <button
-                                      onClick={() => setLyricsOffset(lyricsOffset - 0.5)}
-                                      className="p-1 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
-                                      title="Delay lyrics (-0.5s)"
-                                    >
-                                      <Minus size={10} />
-                                    </button>
-                                    <span className="font-mono font-bold text-[#00f2ff] px-1 select-none min-w-[34px] text-center text-[9px]">
-                                      {lyricsOffset === 0 ? 'SYNC' : `${lyricsOffset > 0 ? '+' : ''}${lyricsOffset.toFixed(1)}s`}
-                                    </span>
-                                    <button
-                                      onClick={() => setLyricsOffset(lyricsOffset + 0.5)}
-                                      className="p-1 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
-                                      title="Speed up lyrics (+0.5s)"
-                                    >
-                                      <Plus size={10} />
-                                    </button>
-                                    {lyricsOffset !== 0 && (
-                                      <button
-                                        onClick={() => setLyricsOffset(0)}
-                                        className="p-1 text-pink-400 hover:text-pink-300 transition-colors cursor-pointer flex items-center justify-center"
-                                        title="Reset offset"
+                                {/* Two-panel layout */}
+                                <div className="relative z-10 flex flex-col md:flex-row h-full w-full pt-20 px-8 md:px-16 pb-[160px] gap-8 md:gap-16">
+                                  
+                                  {/* Left Panel — Album Art ONLY (Amazon Music style) */}
+                                  <div className="flex flex-col items-center md:items-start justify-center shrink-0 md:w-[45%] h-full max-h-[80vh]">
+                                    <img
+                                      ref={lyricsImageRef}
+                                      src={currentTrack.coverUrl || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=60'}
+                                      alt={currentTrack.title}
+                                      className={`immersive-album-cover w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[460px] lg:h-[460px] object-cover select-none pointer-events-none shadow-2xl rounded-[32px] transition-opacity duration-500 ${isYtActive ? 'opacity-0' : 'opacity-100'}`}
+                                    />
+                                  </div>
+
+                                  {/* Right Panel — Lyrics */}
+                                  <div className="flex-grow flex flex-col justify-center overflow-hidden h-full md:w-[55%] pb-8 rounded-[32px] backdrop-blur-[12px]">
+                                    
+                                    {/* SCROLL MODE — Full immersive lyrics */}
+                                    {lyricMode === 'scroll' && (
+                                      <div 
+                                        ref={lyricsScrollRef} 
+                                        className="lyrics-immersive-scroll flex flex-col gap-2 px-2 md:px-8 h-full w-full"
                                       >
-                                        <RotateCcw size={9} />
-                                      </button>
+                                        <div className="h-[30vh] shrink-0" /> {/* Top padding so active line is centered */}
+                                        {tracksLyrics.map((line, idx) => {
+                                          const isActive = idx === activeLyricIndex;
+                                          const isPast = idx < activeLyricIndex;
+                                          return (
+                                            <p
+                                              key={idx}
+                                              data-lyric-active={isActive ? 'true' : 'false'}
+                                              onClick={() => seek(line.time)}
+                                              className={`lyric-immersive-line ${
+                                                isActive
+                                                  ? 'is-active lyric-immersive-active-anim'
+                                                  : isPast
+                                                    ? 'is-past'
+                                                    : 'is-future'
+                                              }`}
+                                            >
+                                              {line.text}
+                                            </p>
+                                          );
+                                        })}
+                                        <div className="h-[40vh] shrink-0" /> {/* Bottom padding */}
+                                      </div>
+                                    )}
+
+                                    {/* LINE MODE — Single active + next preview */}
+                                    {lyricMode === 'line' && (
+                                      <div className="flex flex-col gap-6 justify-center px-4 md:px-8 h-full">
+                                        <p key={activeLyricIndex} className="lyric-immersive-single lyric-immersive-active-anim select-none">
+                                          {activeLyric ? (
+                                            <WordByWordLine
+                                              text={activeLyric.text}
+                                              startTime={activeLyric.time}
+                                              endTime={nextLyric ? nextLyric.time : duration}
+                                              currentTime={currentTime + lyricsOffset}
+                                              glowClass=""
+                                              activeColorClass="text-white"
+                                              inactiveColorClass="text-white/30"
+                                            />
+                                          ) : (
+                                            isLoadingLyrics ? "✨ Loading lyrics..." : ""
+                                          )}
+                                        </p>
+                                        {nextLyric && (
+                                          <p className="lyric-immersive-next select-none truncate">
+                                            {nextLyric.text}
+                                          </p>
+                                        )}
+                                      </div>
                                     )}
                                   </div>
-                                )}
+                                </div>
+                                
+                                {/* Amazon Music Style Bottom Playback Bar */}
+                                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 flex flex-col gap-4 bg-gradient-to-t from-black via-black/80 to-transparent z-50 pointer-events-auto">
+                                  {/* Top Row: Info + Actions */}
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex flex-col max-w-[50%] md:max-w-[40%] lg:max-w-[30%]">
+                                      <h3 className="text-xl md:text-2xl lg:text-3xl font-black text-white leading-tight truncate capitalize drop-shadow-md">
+                                        {currentTrack.title || 'Unknown'}
+                                      </h3>
+                                      <p className="text-sm md:text-base lg:text-lg font-bold text-white/70 truncate drop-shadow-md">
+                                        {currentTrack.artist || 'Unknown Artist'}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-3 md:gap-4">
+                                      <SongActionsMenu track={currentTrack} direction="up" />
+
+                                      {/* Lyric Mode Toggles */}
+                                      <div className="flex bg-black/50 border border-white/10 rounded-full p-1 select-none shrink-0 backdrop-blur-xl shadow-2xl">
+                                        <button onClick={() => { setLyricMode('off'); if (videoOpacity === 0.12) setVideoOpacity(1.0); }} className={`p-1.5 md:p-2 rounded-full transition-all cursor-pointer ${lyricMode === 'off' ? 'bg-white/20 text-white shadow-sm' : 'text-white/50 hover:text-white/80'}`} title="Lyrics Off"><EyeOff size={16} /></button>
+                                        <button onClick={() => setLyricMode('line')} className={`p-1.5 md:p-2 rounded-full transition-all cursor-pointer ${lyricMode === 'line' ? 'bg-[#00f2ff]/20 text-[#00f2ff] shadow-sm' : 'text-white/50 hover:text-white/80'}`} title="Line-by-Line Lyrics"><AlignLeft size={16} /></button>
+                                        <button onClick={() => setLyricMode('scroll')} className={`p-1.5 md:p-2 rounded-full transition-all cursor-pointer ${lyricMode === 'scroll' ? 'bg-[#00f2ff]/20 text-[#00f2ff] shadow-sm' : 'text-white/50 hover:text-white/80'}`} title="Full Scrolling Lyrics"><ScrollText size={16} /></button>
+                                      </div>
+
+                                      {/* Sync Offset */}
+                                      <div className="lyric-sync-controller hidden md:flex items-center gap-1 bg-black/50 border border-white/10 rounded-full p-1 select-none shrink-0 text-white/50 backdrop-blur-xl shadow-2xl">
+                                        <button onClick={() => setLyricsOffset(lyricsOffset - 0.5)} className="p-1.5 hover:bg-white/10 rounded-full transition-all cursor-pointer" title="Delay lyrics (-0.5s)"><Minus size={14} /></button>
+                                        <span className="font-mono font-bold text-[#00f2ff] px-1 select-none min-w-[36px] text-center text-xs">{lyricsOffset === 0 ? 'SYNC' : `${lyricsOffset > 0 ? '+' : ''}${lyricsOffset.toFixed(1)}s`}</span>
+                                        <button onClick={() => setLyricsOffset(lyricsOffset + 0.5)} className="p-1.5 hover:bg-white/10 rounded-full transition-all cursor-pointer" title="Speed up lyrics (+0.5s)"><Plus size={14} /></button>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Progress Bar */}
+                                  <div className="w-full flex items-center gap-3">
+                                    <span className="text-[10px] md:text-xs text-white/50 font-medium w-8 md:w-10 text-right font-mono tracking-wider">
+                                      {formatTime(currentTime)}
+                                    </span>
+                                    <div 
+                                      className="flex-grow h-1.5 md:h-2 bg-white/20 rounded-full cursor-pointer relative overflow-hidden group"
+                                      onClick={(e) => {
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        const pos = (e.clientX - rect.left) / rect.width;
+                                        seek(pos * duration);
+                                      }}
+                                    >
+                                      <div 
+                                        className="absolute top-0 left-0 h-full bg-white rounded-full group-hover:bg-[#00f2ff] transition-colors"
+                                        style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                                      />
+                                    </div>
+                                    <span className="text-[10px] md:text-xs text-white/50 font-medium w-8 md:w-10 text-left font-mono tracking-wider">
+                                      -{formatTime(duration - currentTime)}
+                                    </span>
+                                  </div>
+
+                                  {/* Playback Controls Row */}
+                                  <div className="flex items-center justify-between px-2 md:px-8 mt-1">
+                                    <div className="flex items-center gap-4">
+                                      <button onClick={toggleShuffle} className={`p-2 rounded-full cursor-pointer ${isShuffle ? 'text-[#00f2ff]' : 'text-white/50 hover:text-white'}`}>
+                                        <Shuffle size={20} />
+                                      </button>
+                                      <button onClick={prevTrack} className="p-2 text-white/70 hover:text-white cursor-pointer active:scale-95 transition-transform">
+                                        <SkipBack size={24} />
+                                      </button>
+                                    </div>
+                                    
+                                    <button 
+                                      onClick={togglePlay}
+                                      className="w-14 h-14 md:w-16 md:h-16 flex items-center justify-center bg-white rounded-full hover:scale-105 active:scale-95 transition-transform text-black cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+                                    >
+                                      {isPlaying ? <Pause size={28} className="fill-black" /> : <Play size={28} className="fill-black ml-1.5" />}
+                                    </button>
+
+                                    <div className="flex items-center gap-4">
+                                      <button onClick={nextTrack} className="p-2 text-white/70 hover:text-white cursor-pointer active:scale-95 transition-transform">
+                                        <SkipForward size={24} />
+                                      </button>
+                                      <button onClick={toggleRepeat} className={`p-2 rounded-full cursor-pointer ${isRepeat ? 'text-[#00f2ff]' : 'text-white/50 hover:text-white'}`}>
+                                        <Repeat size={20} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
+                            )}
+
+                            {/* Normal Dashboard Song Title + Artist (Only shown when lyrics are off) */}
+                            {lyricMode === 'off' && (
+                              <div className="flex flex-col space-y-1 text-left min-w-0 shrink-0 mt-4 pb-2 animate-fade-in">
+                                <p className={`text-[10px] font-mono uppercase tracking-widest text-pink-500 animate-pulse ${isYtActive ? 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]' : ''}`}>Now Playing</p>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <h2 className={`text-base md:text-lg font-extrabold text-white select-none capitalize tracking-tight leading-tight truncate ${isYtActive ? 'drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]' : ''}`}>
+                                    {(currentTrack.title || '').toUpperCase()}
+                                    <span className="text-white/40 font-normal lowercase italic px-1.5">by</span>
+                                    <span className={`text-[#00f2ff] ${isYtActive ? 'drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)] text-shadow-sm' : 'drop-shadow-[0_0_8px_rgba(0,242,255,0.3)]'}`}>{currentTrack.artist || 'Unknown'}</span>
+                                  </h2>
+                                  <SongActionsMenu track={currentTrack} />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
 
                         {/* Background Video Mode Selector for YouTube media */}
                         {currentTrack?.isYoutube && !isYtFallbackActive && (
-                          <div className="mt-3 flex items-center gap-2 text-[9px] uppercase font-bold tracking-widest text-[#00f2ff]/80 animate-fade-in flex-wrap">
+                          <div className="mt-3 flex items-center gap-2 text-[9px] uppercase font-bold tracking-widest text-[#00f2ff]/80 animate-fade-in flex-wrap shrink-0">
                             <div className="flex flex-wrap bg-black/60 border border-white/10 rounded-2xl p-0.5 gap-0.5 max-w-full">
                               <button
                                 onClick={() => setVideoOpacity(1.0)}
@@ -1190,6 +1349,75 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                               </div>
                             </div>
                           </div>
+                          
+                          {/* Moved Lyric Controls to bottom right */}
+                          <div className="flex items-center gap-1.5 md:gap-2 ml-auto">
+                            {/* Instagram-style Lyric Mode Toggle Pill */}
+                            <div className="lyric-mode-pill flex bg-black/50 backdrop-blur-xl border border-white/10 rounded-full p-1 select-none shrink-0 shadow-2xl">
+                              <button
+                                onClick={() => {
+                                  setLyricMode('off');
+                                  if (videoOpacity === 0.12) setVideoOpacity(1.0); // Revert to full 100% if it was explicitly dimmed for lyrics
+                                }}
+                                className={`p-1.5 rounded-full transition-all cursor-pointer ${lyricMode === 'off' ? 'bg-white/20 text-white shadow-sm' : 'text-white/50 hover:text-white/80'}`}
+                                title="Lyrics Off"
+                              >
+                                <EyeOff size={11} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (!isLoadingLyrics && tracksLyrics.length === 0) return;
+                                  setLyricMode('line');
+                                  setVideoOpacity(0.12);
+                                }}
+                                className={`p-1.5 rounded-full transition-all ${lyricMode === 'line' ? 'bg-[#00f2ff]/20 text-[#00f2ff] shadow-sm' : 'text-white/50 hover:text-white/80'} ${!isLoadingLyrics && tracksLyrics.length === 0 ? 'opacity-30 cursor-not-allowed hover:text-white/40' : 'cursor-pointer'}`}
+                                title={!isLoadingLyrics && tracksLyrics.length === 0 ? "No lyrics available" : "Line-by-Line Lyrics"}
+                              >
+                                <AlignLeft size={11} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (!isLoadingLyrics && tracksLyrics.length === 0) return;
+                                  setLyricMode('scroll');
+                                  setVideoOpacity(0.12);
+                                }}
+                                className={`p-1.5 rounded-full transition-all ${lyricMode === 'scroll' ? 'bg-[#00f2ff]/20 text-[#00f2ff] shadow-sm' : 'text-white/50 hover:text-white/80'} ${!isLoadingLyrics && tracksLyrics.length === 0 ? 'opacity-30 cursor-not-allowed hover:text-white/40' : 'cursor-pointer'}`}
+                                title={!isLoadingLyrics && tracksLyrics.length === 0 ? "No lyrics available" : "Full Scrolling Lyrics"}
+                              >
+                                <ScrollText size={11} />
+                              </button>
+                            </div>
+
+                            {/* Sync Offset Calibration Adjustment Controller */}
+                            <div className="flex items-center gap-1 bg-black/50 backdrop-blur-xl border border-white/10 rounded-full p-1 select-none shrink-0 text-white/50 shadow-2xl">
+                              <button
+                                onClick={() => setLyricsOffset(lyricsOffset - 0.5)}
+                                className="p-1 hover:bg-white/10 rounded-full transition-all cursor-pointer flex items-center justify-center"
+                                title="Delay lyrics (-0.5s)"
+                              >
+                                <Minus size={10} />
+                              </button>
+                              <span className="font-mono font-bold text-[#00f2ff] px-1.5 select-none min-w-[34px] text-center text-[9px]">
+                                {lyricsOffset === 0 ? 'SYNC' : `${lyricsOffset > 0 ? '+' : ''}${lyricsOffset.toFixed(1)}s`}
+                              </span>
+                              <button
+                                onClick={() => setLyricsOffset(lyricsOffset + 0.5)}
+                                className="p-1 hover:bg-white/10 rounded-full transition-all cursor-pointer flex items-center justify-center"
+                                title="Speed up lyrics (+0.5s)"
+                              >
+                                <Plus size={10} />
+                              </button>
+                              {lyricsOffset !== 0 && (
+                                <button
+                                  onClick={() => setLyricsOffset(0)}
+                                  className="p-1 hover:bg-white/10 rounded-full transition-all cursor-pointer text-white/70"
+                                  title="Reset Sync"
+                                >
+                                  <RotateCcw size={10} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1199,49 +1427,63 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                       {carouselTracks.map(({ track, indexOffset }, idx) => {
                         const isActive = indexOffset === 0;
 
-                        // Dynamic dimensions depending on distance from active center
-                        let dimensionClass = "w-14 h-14 border-2 border-white/20 opacity-60";
+                        let wrapperClass = "p-0 bg-transparent rounded-full";
+                        let imgClass = "w-14 h-14 opacity-30 hover:opacity-100 border border-white/10";
+                        let containerClass = "z-0";
+
                         if (isActive) {
-                          dimensionClass = "w-24 h-24 md:w-28 md:h-28 border-4 border-white/50 z-20 shadow-2xl relative scale-110";
+                          wrapperClass = "p-1.5 md:p-2 bg-white/20 backdrop-blur-xl border border-white/40 shadow-[0_0_30px_rgba(255,255,255,0.2)] rounded-full";
+                          imgClass = "w-24 h-24 md:w-28 md:h-28 opacity-100 shadow-inner";
+                          containerClass = "z-30 scale-110 mx-2 md:mx-4";
                         } else if (Math.abs(indexOffset) === 1) {
-                          dimensionClass = "w-16 h-16 md:w-20 md:h-20 border-2 border-white/30 opacity-80 z-10";
+                          wrapperClass = "p-0.5 bg-white/5 backdrop-blur-sm rounded-full border border-white/20 shadow-lg";
+                          imgClass = "w-16 h-16 md:w-20 md:h-20 opacity-70 hover:opacity-90";
+                          containerClass = "z-20";
                         } else if (Math.abs(indexOffset) === 2) {
-                          dimensionClass = "w-14 h-14 md:w-16 md:h-16 border-2 border-white/10 opacity-50";
+                          wrapperClass = "p-0 rounded-full";
+                          imgClass = "w-14 h-14 md:w-16 md:h-16 opacity-40 hover:opacity-70 border border-white/10";
+                          containerClass = "z-10";
                         } else {
-                          dimensionClass = "w-10 h-10 md:w-12 md:h-12 border border-white/5 opacity-30";
+                          wrapperClass = "p-0 rounded-full";
+                          imgClass = "w-10 h-10 md:w-12 md:h-12 opacity-20 hover:opacity-50 border border-white/5";
+                          containerClass = "z-0 hidden sm:flex"; // hide furthest on small screens
                         }
 
                         return (
                           <div
                             key={track.id + '-' + idx}
                             onClick={() => playTrack(track, allTracks)}
-                            className={`rounded-full overflow-hidden cursor-pointer transition-all duration-500 flex items-center justify-center shrink-0 hover:scale-105 active:scale-95 group ${dimensionClass}`}
+                            className={`cursor-pointer transition-all duration-700 ease-out flex items-center justify-center shrink-0 hover:scale-105 active:scale-95 group ${containerClass}`}
                             title={track.title}
                           >
-                            <img 
-                              alt={track.title} 
-                              className="w-full h-full object-cover select-none pointer-events-none" 
-                              src={track.coverUrl || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=60'} 
-                            />
-                            
-                            {/* Hover playing mask overlays */}
-                            {isActive && (
-                              <div className="absolute inset-0 bg-black/35 flex items-center justify-center">
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    togglePlay();
-                                  }}
-                                  className="w-10 h-10 md:w-12 md:h-12 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white/50 transition-all text-white cursor-pointer"
-                                >
-                                  {isPlaying ? (
-                                    <Pause className="w-5 h-5 fill-current" />
-                                  ) : (
-                                    <Play className="w-5 h-5 fill-current ml-0.5" />
-                                  )}
-                                </button>
+                            <div className={`${wrapperClass} transition-all duration-700 ease-out`}>
+                              <div className={`relative rounded-full overflow-hidden ${imgClass} transition-all duration-700 ease-out`}>
+                                <img 
+                                  alt={track.title} 
+                                  className="w-full h-full object-cover select-none pointer-events-none" 
+                                  src={track.coverUrl || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=60'} 
+                                />
+                                
+                                {/* Hover playing mask overlays */}
+                                {isActive && (
+                                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center transition-all">
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        togglePlay();
+                                      }}
+                                      className="w-10 h-10 md:w-12 md:h-12 bg-white/40 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white/60 transition-all text-white cursor-pointer shadow-lg"
+                                    >
+                                      {isPlaying ? (
+                                        <Pause className="w-5 h-5 fill-current drop-shadow-md" />
+                                      ) : (
+                                        <Play className="w-5 h-5 fill-current ml-0.5 drop-shadow-md" />
+                                      )}
+                                    </button>
+                                  </div>
+                                )}
                               </div>
-                            )}
+                            </div>
                           </div>
                         );
                       })}
@@ -1522,7 +1764,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
           </div>
 
           {/* Right vertical utility selectors */}
-          <aside className="fixed right-6 md:right-8 top-1/2 -translate-y-1/2 flex flex-col justify-center space-y-4 md:space-y-6 z-50">
+          <aside className={`fixed right-6 md:right-8 top-1/2 -translate-y-1/2 flex flex-col justify-center space-y-4 md:space-y-6 z-50 transition-opacity duration-500 ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <div className="glass-dark-mav px-2.5 md:px-4 py-4 md:py-6 rounded-full flex flex-col items-center space-y-4 md:space-y-6 text-white">
               <button 
                 onClick={() => handleTabChange(TabletTab.LIVE)}
@@ -1663,7 +1905,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
         {/* Adaptive Footer Navigation Bar — glassmorphic, adapts to video/audio mode */}
         <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 ${isPodcastPlayerActive ? 'z-[35]' : 'z-[40]'} flex justify-center select-none pointer-events-none`}>
           <div 
-            className={`pointer-events-auto flex items-center gap-1 px-1.5 py-1.5 rounded-full transition-all duration-500 ${
+            className={`flex items-center gap-1 px-1.5 py-1.5 rounded-full transition-all duration-500 ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'} ${
               isYtActive 
                 ? 'bg-black/50 backdrop-blur-xl border border-white/15 shadow-[0_4px_30px_rgba(0,0,0,0.5)]' 
                 : 'bg-white/[0.06] backdrop-blur-md border border-white/10 shadow-[0_2px_20px_rgba(0,0,0,0.3)]'
@@ -1724,8 +1966,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
         </div>
 
         {/* Fixed Bottom-Left Guest Listener / User Badge */}
-        <div 
-          className="user-badge-bottom select-none pointer-events-auto"
+        <div className={`fixed bottom-6 left-6 md:left-8 z-[60] pointer-events-auto transition-opacity duration-500 ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'} user-badge-bottom select-none pointer-events-auto`}
           onClick={() => {
             if (!user) onAuthClick();
           }}

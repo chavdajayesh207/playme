@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 // =============================================
 // Horizontal scroll wrapper with drag-to-scroll
 // =============================================
-export const HScroll = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => {
+export const HScroll = ({ children, className = 'pb-4 gap-4' }: { children: React.ReactNode; className?: string }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isDown, setIsDown] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -34,7 +34,7 @@ export const HScroll = ({ children, className = '' }: { children: React.ReactNod
       onMouseLeave={onMouseLeave}
       onMouseUp={onMouseUp}
       onMouseMove={onMouseMove}
-      className={`flex overflow-x-auto scrollbar-none pb-4 gap-4 cursor-grab active:cursor-grabbing ${isDown ? '' : 'snap-x snap-mandatory'} ${className}`}
+      className={`flex overflow-x-auto scrollbar-none cursor-grab active:cursor-grabbing ${isDown ? '' : 'snap-x snap-mandatory'} ${className}`}
     >
       {children}
     </div>

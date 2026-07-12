@@ -216,15 +216,11 @@ export const LyricsShowcase: React.FC = () => {
         {/* Content Showcase Area depending on active style mode */}
         <div className="flex-grow overflow-hidden relative my-4 flex items-center justify-center">
 
-          {/* MODE 1: Scrolling Karaoke Roll */}
+          {/* MODE 1: Scrolling Karaoke Roll (Amazon Music Style) */}
           {styleMode === 'karaoke' && (
             <div 
               ref={karaokeContainerRef}
-              className="w-full h-full overflow-y-auto px-2 py-8 scrollbar-hide flex flex-col gap-3.5 static mask-scrolling-y"
-              style={{
-                maskImage: 'linear-gradient(to bottom, transparent, white 20%, white 80%, transparent)',
-                WebkitMaskImage: 'linear-gradient(to bottom, transparent, white 20%, white 80%, transparent)'
-              }}
+              className="w-full h-full overflow-y-auto px-2 md:px-4 py-8 lyrics-immersive-scroll flex flex-col gap-2 static"
             >
               {lyrics.map((line, i) => {
                 const isActive = i === activeLineIndex;
@@ -234,15 +230,15 @@ export const LyricsShowcase: React.FC = () => {
                     key={`${line.time}-${i}`}
                     ref={isActive ? activeLineRef : null}
                     onClick={() => handleLineClick(line.time)}
-                    className={`w-full text-left py-1.5 px-3 rounded-xl transition-all duration-300 font-sans cursor-pointer focus:outline-none flex items-start gap-3 group ${
+                    className={`w-full text-left py-1 px-3 transition-all duration-300 cursor-pointer focus:outline-none flex items-start ${
                       isActive 
-                        ? 'text-[#00f2ff] text-base md:text-lg font-extrabold font-sans tracking-tight opacity-100 scale-[1.02]' 
+                        ? 'text-white text-2xl md:text-3xl font-black opacity-100 scale-100 drop-shadow-[0_2px_15px_rgba(255,255,255,0.3)] lyric-immersive-active-anim' 
                         : isPast 
-                          ? 'text-white/30 text-sm md:text-base font-medium opacity-50' 
-                          : 'text-white/50 text-sm md:text-base font-medium opacity-70 hover:opacity-100'
+                          ? 'text-white text-xl md:text-2xl font-bold opacity-20 scale-[0.98]' 
+                          : 'text-white text-xl md:text-2xl font-bold opacity-45 scale-[0.98] hover:opacity-60'
                     }`}
                   >
-                    <span className="break-words line-clamp-2 select-text">{line.text}</span>
+                    <span className="break-words select-text leading-tight">{line.text}</span>
                   </button>
                 );
               })}
