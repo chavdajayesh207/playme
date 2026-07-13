@@ -846,13 +846,13 @@ export const LiveStageView: React.FC = () => {
 
             <div className="max-w-2xl relative z-10">
               <span className="uppercase tracking-widest text-[9px] font-mono font-bold text-[#00f2ff] bg-[#00f2ff]/10 px-3 py-1 rounded-full border border-[#00f2ff]/20">
-                World-Class Audio Broadcasts
+                Premium Audio Experiences
               </span>
               <h2 className="font-headline font-semibold text-3xl md:text-5xl text-white tracking-tight leading-tight mt-4">
-                Educate. Enjoy. <span className="text-pink-500">Learn.</span>
+                Listen. Discover. <span className="text-pink-500">Grow.</span>
               </h2>
               <p className="text-gray-400 font-sans text-xs md:text-sm mt-3.5 leading-relaxed max-w-lg">
-                Immerse yourself in original educational discussions, business insights, and billionaire thinking. Click on any podcast channel below to fetch real-time YouTube episodes.
+                Dive deep into captivating conversations, untold stories, and fresh perspectives from top creators. Select a podcast below to instantly stream high-fidelity episodes and broaden your horizons.
               </p>
             </div>
           </section>

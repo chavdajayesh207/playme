@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { useAudioPlayer } from './AudioPlayerContext';
+import { useAudioPlayer, useAudioTime } from './AudioPlayerContext';
 import { Play, Pause, SkipForward, SkipBack, Heart, Volume2, VolumeX } from 'lucide-react';
 import { NavigationTab } from '../types';
 import { Visualizer } from './Visualizer';
@@ -17,8 +17,6 @@ export const FloatingPlayerBar: React.FC<FloatingPlayerBarProps> = ({ onExpandPl
   const {
     currentTrack,
     isPlaying,
-    currentTime,
-    duration,
     togglePlay,
     nextTrack,
     prevTrack,
@@ -28,6 +26,8 @@ export const FloatingPlayerBar: React.FC<FloatingPlayerBarProps> = ({ onExpandPl
     toggleFavorite,
     isFavorite,
   } = useAudioPlayer();
+
+  const { currentTime, duration } = useAudioTime();
 
   const progressPercent = (currentTime / (duration || 100)) * 100;
 

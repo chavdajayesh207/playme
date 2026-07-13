@@ -337,10 +337,10 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({ onBrowseAl
                 {SECTION_ICONS[key] || <Sparkles className="text-white/50" size={20} />}
                 <div>
                   <h3 className="text-xl md:text-2xl font-black text-white flex items-center gap-2">
-                    {data.emoji} {data.title}
+                    {data.title}
                   </h3>
                   <p className="text-[10px] text-white/40 font-mono uppercase tracking-widest mt-0.5">
-                    {data.tracks.length} tracks • Live from YouTube
+                    {data.tracks.length} tracks • PlayMe Discovery
                   </p>
                 </div>
               </div>

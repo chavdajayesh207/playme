@@ -120,28 +120,29 @@ export const UserProfilePortal: React.FC<UserProfilePortalProps> = ({ isOpen, on
         <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[50%] bg-[#00f2ff]/10 hidden md:block blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-pink-500/5 hidden md:block blur-[120px] rounded-full pointer-events-none" />
 
-        {/* --- HEADER SECTION --- */}
-        <div className="relative pt-20 pb-10 px-8 md:px-12 lg:px-16 flex flex-col md:flex-row items-center md:items-end gap-8 shrink-0 border-b border-white/5 bg-gradient-to-b from-[#00f2ff]/5 to-transparent">
-          
-          {/* Top Nav Actions */}
-          <div className="absolute top-6 right-6 md:top-8 md:right-8 flex items-center gap-4 z-20">
-            <button onClick={() => setIsSettingsOpen(true)} className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full text-white transition-all hover:scale-105 active:scale-95" title="Settings">
-              <Settings size={20} />
-            </button>
-            <button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full text-white transition-all hover:scale-105 active:scale-95">
-              <X size={20} />
-            </button>
-          </div>
+        {/* Top Nav Actions */}
+        <div className="absolute top-6 right-6 md:top-8 md:right-8 flex items-center gap-4 z-20">
+          <button onClick={() => setIsSettingsOpen(true)} className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full text-white transition-all hover:scale-105 active:scale-95" title="Settings">
+            <Settings size={20} />
+          </button>
+          <button onClick={onClose} className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-full text-white transition-all hover:scale-105 active:scale-95">
+            <X size={20} />
+          </button>
+        </div>
 
-          <Logo className="absolute top-6 left-6 md:top-8 md:left-8 h-8 w-auto text-white opacity-80" withText={true} />
+        <Logo className="absolute top-6 left-6 md:top-8 md:left-8 h-8 w-auto text-white opacity-80 z-20" withText={true} />
 
-          {/* Animated Avatar */}
+        {/* --- SCROLLABLE CONTENT --- */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10">
+          {/* --- HEADER SECTION --- */}
+          <div className="relative pt-24 pb-10 px-8 md:px-12 lg:px-16 flex flex-col md:flex-row items-center md:items-end gap-8 shrink-0 border-b border-white/5 bg-gradient-to-b from-[#00f2ff]/5 to-transparent">
+            {/* Animated Avatar */}
           <div className="relative group shrink-0 mt-8 md:mt-0">
             <div className="absolute -inset-2 bg-gradient-to-tr from-[#00f2ff] via-blue-500 to-purple-600 rounded-full animate-[spin_4s_linear_infinite] opacity-80 blur-[4px]" />
             <div className="absolute -inset-1 bg-gradient-to-tr from-[#00f2ff] via-blue-500 to-purple-600 rounded-full" />
             <div className="absolute -inset-1 bg-gradient-to-tr from-[#00f2ff] via-blue-500 to-purple-600 rounded-full blur-xl opacity-50 group-hover:opacity-100 transition-opacity duration-500" />
             
-            <div className="relative w-40 h-40 md:w-56 md:h-56 rounded-full bg-[#121212] border-[6px] border-[#080808] flex items-center justify-center overflow-hidden z-10 shadow-2xl transition-transform duration-500 group-hover:scale-[0.98]">
+            <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full bg-[#121212] border-[4px] md:border-[6px] border-[#080808] flex items-center justify-center overflow-hidden z-10 shadow-2xl transition-transform duration-500 group-hover:scale-[0.98]">
               {user.photoURL ? (
                 <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" />
               ) : (
@@ -155,14 +156,17 @@ export const UserProfilePortal: React.FC<UserProfilePortalProps> = ({ isOpen, on
           </div>
 
           {/* User Details */}
-          <div className="flex flex-col gap-2 text-center md:text-left z-10 mt-4 md:mt-0">
+          <div className="flex flex-col gap-2 text-center md:text-left z-10 mt-4 md:mt-0 min-w-0 flex-1">
             <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
               <BadgeCheck className="text-blue-400" size={20} />
-              <span className="text-xs font-bold text-white uppercase tracking-widest bg-white/10 px-2.5 py-1 rounded-full">
+              <span className="text-xs font-bold text-white uppercase tracking-widest bg-white/10 px-2.5 py-1 rounded-full shrink-0">
                 PlayMe User
               </span>
             </div>
-            <h1 className="text-5xl sm:text-6xl md:text-8xl font-headline font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-[#00f2ff]/70 tracking-tighter leading-none py-1 drop-shadow-lg">
+            <h1 
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-headline font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-[#00f2ff]/70 tracking-tighter leading-tight py-1 drop-shadow-lg truncate max-w-full"
+              title={user.displayName || 'Guest'}
+            >
               {user.displayName || 'Guest'}
             </h1>
             <div className="flex items-center justify-center md:justify-start gap-4 text-sm font-medium text-white/50 mt-2">
@@ -171,12 +175,12 @@ export const UserProfilePortal: React.FC<UserProfilePortalProps> = ({ isOpen, on
               <span>Joined {new Date(user.createdAt).getFullYear() || '2026'}</span>
             </div>
           </div>
-        </div>
-
-        {/* --- SCROLLABLE CONTENT --- */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar px-6 md:px-12 lg:px-16 pb-32 relative z-10">
+          </div>
           
-          {/* Action Row */}
+          {/* Content Body */}
+          <div className="px-6 md:px-12 lg:px-16 pb-12">
+            
+            {/* Action Row */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between py-8 gap-4">
             <div className="flex items-center gap-4">
               <button 
@@ -373,6 +377,39 @@ export const UserProfilePortal: React.FC<UserProfilePortalProps> = ({ isOpen, on
                 </button>
               </div>
 
+              {/* --- REAL PLAYLISTS CAROUSEL (Moved to fill empty space) --- */}
+              <div className="pt-4">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-2"><Music className="text-pink-400" /> Your Playlists</h2>
+                </div>
+                {playlists.length > 0 ? (
+                  <div className="flex gap-6 overflow-x-auto custom-scrollbar pb-8 snap-x">
+                    {playlists.map(playlist => (
+                      <div key={playlist.id} className="min-w-[180px] md:min-w-[220px] snap-start group cursor-pointer" onClick={() => {
+                        window.dispatchEvent(new CustomEvent('playme-navigate', { 
+                          detail: { tab: 'favorites', librarySubTab: 'playlists' } 
+                        }));
+                        onClose();
+                      }}>
+                        <div className="aspect-square w-full rounded-2xl bg-gradient-to-br from-[#00f2ff]/20 to-[#002022] border border-white/5 p-4 flex flex-col justify-end relative overflow-hidden shadow-xl mb-4 group-hover:-translate-y-2 transition-all duration-300 group-hover:border-[#00f2ff]/30">
+                          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_white_1px,_transparent_1px)] [background-size:16px_16px]" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#030303]/90 via-black/20 to-transparent" />
+                          <div className="relative z-10 flex items-center justify-between">
+                            <span className="text-[#b9cacb]/80 text-[11px] font-bold tracking-widest uppercase">{playlist.trackIds.length} Songs</span>
+                          </div>
+                        </div>
+                        <h4 className="text-white font-bold text-lg truncate group-hover:text-[#00f2ff] transition-colors">{playlist.name}</h4>
+                        <p className="text-white/40 text-sm font-medium">Created {new Date(playlist.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                   <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-8 text-center">
+                     <ListMusic size={48} className="text-white/10 mx-auto mb-4" />
+                     <p className="text-white/40">You haven't created any playlists yet.</p>
+                   </div>
+                )}
+              </div>
             </div>
 
             {/* RIGHT COLUMN: Subscription & Artists */}
@@ -436,36 +473,6 @@ export const UserProfilePortal: React.FC<UserProfilePortalProps> = ({ isOpen, on
             </div>
           </div>
 
-          {/* --- REAL PLAYLISTS CAROUSEL --- */}
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-2"><Music className="text-pink-400" /> Your Playlists</h2>
-            </div>
-            {playlists.length > 0 ? (
-              <div className="flex gap-6 overflow-x-auto custom-scrollbar pb-8 -mx-6 px-6 md:-mx-12 md:px-12 lg:-mx-16 lg:px-16 snap-x">
-                {playlists.map(playlist => (
-                  <div key={playlist.id} className="min-w-[200px] md:min-w-[240px] snap-start group cursor-pointer">
-                    <div className="aspect-square w-full rounded-2xl bg-gradient-to-br from-[#00f2ff]/20 to-[#002022] border border-white/5 p-4 flex flex-col justify-end relative overflow-hidden shadow-xl mb-4 group-hover:-translate-y-2 transition-all duration-300 group-hover:border-[#00f2ff]/30">
-                      {/* Pattern background */}
-                      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_white_1px,_transparent_1px)] [background-size:16px_16px]" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#030303]/90 via-black/20 to-transparent" />
-                      <div className="relative z-10 flex items-center justify-between">
-                        <span className="text-[#b9cacb]/80 text-[11px] font-bold tracking-widest uppercase">{playlist.trackIds.length} Songs</span>
-                      </div>
-                    </div>
-                    <h4 className="text-white font-bold text-lg truncate group-hover:text-purple-400 transition-colors">{playlist.name}</h4>
-                    <p className="text-white/40 text-sm font-medium">Created {new Date(playlist.createdAt).toLocaleDateString()}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-               <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-8 text-center">
-                 <ListMusic size={48} className="text-white/10 mx-auto mb-4" />
-                 <p className="text-white/40">You haven't created any playlists yet.</p>
-               </div>
-            )}
-          </div>
-
           {/* --- APP INFO & LINKS --- */}
           <div className="mt-16 pt-8 border-t border-white/5 flex flex-col items-center justify-center gap-4">
             <div className="flex items-center gap-6 text-sm font-medium text-white/50">
@@ -478,6 +485,7 @@ export const UserProfilePortal: React.FC<UserProfilePortalProps> = ({ isOpen, on
             </p>
           </div>
 
+          </div>
         </div>
       </motion.div>
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />

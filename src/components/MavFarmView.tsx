@@ -1,5 +1,5 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { useAudioPlayer } from './AudioPlayerContext';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import { useAudioPlayer, useAudioTime } from './AudioPlayerContext';
 import { useAuth } from './AuthContext';
 import { Track } from '../types';
 import { Search, ShoppingCart, ArrowLeft, Home, Music, List, User, Folder, Mic, MoreVertical, Bell, Download, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, EyeOff, AlignLeft, ScrollText, Clock, Minus, Plus, RotateCcw, Repeat, Share2, Camera, Activity, Zap, Crown, ChevronDown, Shuffle } from 'lucide-react';
@@ -10,11 +10,11 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { SongActionsMenu } from './SongActionsMenu';
 import { WordByWordLine } from './WordByWordLine';
 
-const LiveStageView = lazy(() => import('./LiveStageView').then(m => ({ default: m.LiveStageView })));
-const DiscoverView = lazy(() => import('./DiscoverView').then(m => ({ default: m.DiscoverView })));
-const CollectionsView = lazy(() => import('./CollectionsView').then(m => ({ default: m.CollectionsView })));
-const LibraryView = lazy(() => import('./LibraryView').then(m => ({ default: m.LibraryView })));
-const HomeDashboardView = lazy(() => import('./HomeDashboardView').then(m => ({ default: m.HomeDashboardView })));
+const LiveStageView = lazy(() => import('./LiveStageView').then(m => ({ default: React.memo(m.LiveStageView) })));
+const DiscoverView = lazy(() => import('./DiscoverView').then(m => ({ default: React.memo(m.DiscoverView) })));
+const CollectionsView = lazy(() => import('./CollectionsView').then(m => ({ default: React.memo(m.CollectionsView) })));
+const LibraryView = lazy(() => import('./LibraryView').then(m => ({ default: React.memo(m.LibraryView) })));
+const HomeDashboardView = lazy(() => import('./HomeDashboardView').then(m => ({ default: React.memo(m.HomeDashboardView) })));
 const DownloadModal = lazy(() => import('./DownloadModal').then(m => ({ default: m.DownloadModal })));
 
 enum TabletTab {
@@ -38,8 +38,6 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
   const {
     currentTrack,
     isPlaying,
-    currentTime,
-    duration,
     togglePlay,
     nextTrack,
     prevTrack,
@@ -76,6 +74,8 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
     setPlaceholderRect,
   } = useAudioPlayer();
 
+  const { currentTime, duration } = useAudioTime();
+
   const [activeTab, setActiveTab] = useState<TabletTab>(TabletTab.HOME);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -93,6 +93,19 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isSharingStory, setIsSharingStory] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setShowMoreMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const [userVideoOpacity, setUserVideoOpacity] = useState<number>(videoOpacity || 0.85);
   const homePlayerScrollRef = React.useRef<HTMLDivElement>(null);
@@ -1838,7 +1851,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                 </div>
               </div>
 
-              <div className="relative">
+              <div className="relative" ref={moreMenuRef}>
                 <button 
                   onClick={() => setShowMoreMenu(!showMoreMenu)}
                   className="hover:scale-110 text-gray-400 hover:text-white transition-all cursor-pointer"

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, Shield, Headphones, Bell, Monitor, Info,
   Smartphone, MonitorSpeaker, Check, ToggleLeft, ToggleRight,
-  ChevronRight, LogOut, Key
+  ChevronRight, LogOut, Key, Trash2, Clock
 } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { LegalModal } from './LegalModal';
@@ -17,6 +17,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('account');
   const [showLegalDocument, setShowLegalDocument] = useState<'terms' | 'privacy' | null>(null);
+
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (activeTab === 'account' && user) {
+      setSessionsLoading(true);
+      const token = localStorage.getItem('playme_token');
+      fetch('/api/auth/sessions', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.sessions) setSessions(data.sessions);
+        if (data.currentSessionId) setCurrentSessionId(data.currentSessionId);
+      })
+      .catch(console.error)
+      .finally(() => setSessionsLoading(false));
+    }
+  }, [activeTab, user]);
+
+  const removeSession = async (sessionId: string) => {
+    const token = localStorage.getItem('playme_token');
+    try {
+      await fetch(`/api/auth/sessions/${sessionId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSessions(s => s.filter(x => x.sessionId !== sessionId));
+    } catch (e) { console.error(e); }
+  };
+
+  const removeAllOtherSessions = async () => {
+    const token = localStorage.getItem('playme_token');
+    try {
+      await fetch(`/api/auth/sessions`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSessions(s => s.filter(x => x.sessionId === currentSessionId));
+    } catch (e) { console.error(e); }
+  };
   
   // Persisted states
   const [audioQuality, setAudioQuality] = useState(() => localStorage.getItem('playme_audioQuality') || 'high');
@@ -143,9 +186,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       <p className="text-white/60 font-mono text-sm break-all">{user.uid}</p>
                     </div>
 
-                    <div className="pt-8">
+                    {/* Logged-in Devices Section */}
+                    <div className="pt-4 pb-2">
+                      <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        <Monitor size={18} className="text-[#00f2ff]" /> Logged-in Devices
+                      </h4>
+                      {sessionsLoading ? (
+                        <p className="text-white/50 text-sm">Loading sessions...</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {sessions.map((session, idx) => (
+                            <div key={idx} className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:bg-white/[0.04] transition-colors">
+                              <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center shrink-0">
+                                  {session.deviceInfo === 'Mobile' ? <Smartphone size={18} className="text-pink-400" /> : <Monitor size={18} className="text-blue-400" />}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-white font-medium text-sm flex items-center flex-wrap gap-2">
+                                    <span className="truncate">{session.os} • {session.browser}</span>
+                                    {session.sessionId === currentSessionId && (
+                                      <span className="text-[9px] bg-[#00f2ff]/20 text-[#00f2ff] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold shrink-0">
+                                        This Device
+                                      </span>
+                                    )}
+                                  </p>
+                                  <p className="text-white/40 text-[11px] mt-1 flex items-center gap-1 truncate">
+                                    <Clock size={10} /> Last active: {new Date(session.lastActive).toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                              {session.sessionId !== currentSessionId && (
+                                <button 
+                                  onClick={() => removeSession(session.sessionId)}
+                                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 rounded-full transition-colors shrink-0 ml-2"
+                                  title="Remove Device"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-8 border-t border-white/5">
                       <button 
-                        onClick={() => { logout(); onClose(); }}
+                        onClick={() => { removeAllOtherSessions(); logout(); onClose(); }}
                         className="flex items-center gap-2 px-6 py-3.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl font-bold transition-colors border border-red-500/20 w-full justify-center md:w-auto"
                       >
                         <LogOut size={18} /> Sign Out on all devices

@@ -167,11 +167,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const resetPasswordConfirm = async (token: string, pass: string): Promise<void> => {
+  const resetPasswordConfirm = async (email: string, otp: string, pass: string): Promise<void> => {
     const res = await fetch('/api/auth/reset', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, password: pass })
+      body: JSON.stringify({ email, otp, password: pass })
     });
 
     const data = await res.json();

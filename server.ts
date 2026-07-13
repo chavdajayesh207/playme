@@ -18,6 +18,8 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { userDb } from "./server-user-db";
 import cron from 'node-cron';
+import { UAParser } from "ua-parser-js";
+import { getWelcomeEmailHtml, getRecoveryCodeEmailHtml, getVerificationEmailHtml, getForgotOtpEmailHtml } from "./email-templates";
 
 dotenv.config();
 
@@ -1936,7 +1938,7 @@ const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: "playmeshow07@gmail.com",
-    pass: "kzta wmtz yanq carm", // SMTP App Password
+    pass: "iyyu mbcd vzwe zmfw", // SMTP App Password
   },
 });
 
@@ -1958,149 +1960,11 @@ app.post("/api/email/welcome", async (req, res) => {
 
   const name = displayName || email.split("@")[0] || "Music Lover";
 
-  const welcomeTemplate = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Welcome to Playme.</title>
-        <style>
-          body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background-color: #0b0708;
-            margin: 0;
-            padding: 0;
-            color: #e5e9ea;
-          }
-          .container {
-            max-width: 600px;
-            margin: 30px auto;
-            background: linear-gradient(135deg, #150d10 0%, #0c0809 100%);
-            border: 1px solid rgba(236, 72, 153, 0.15);
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-          }
-          .header {
-            padding: 40px 30px;
-            text-align: center;
-            background: linear-gradient(90deg, #12090c 0%, #1c0e12 100%);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-          }
-          .logo-text {
-            font-size: 32px;
-            font-weight: 800;
-            letter-spacing: -1.5px;
-            background: linear-gradient(135deg, #00f2ff 0%, #ff007f 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin: 0;
-            display: inline-block;
-          }
-          .content {
-            padding: 40px 35px;
-            line-height: 1.6;
-          }
-          h1 {
-            font-size: 22px;
-            margin-top: 0;
-            color: #ffffff;
-            font-weight: 700;
-          }
-          p {
-            font-size: 14px;
-            color: rgba(229, 233, 234, 0.75);
-            margin: 16px 0;
-          }
-          .highlight {
-            color: #00f2ff;
-            font-weight: 600;
-          }
-          .btn {
-            display: inline-block;
-            background: linear-gradient(90deg, #00f2ff 0%, #ff007f 100%);
-            color: #ffffff !important;
-            text-decoration: none;
-            padding: 14px 32px;
-            font-size: 13px;
-            font-weight: 700;
-            border-radius: 16px;
-            margin: 25px 0;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 15px rgba(255, 0, 127, 0.25);
-          }
-          .features {
-            margin: 30px 0;
-            padding-top: 25px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-          }
-          .feature-item {
-            margin-bottom: 15px;
-          }
-          .feature-title {
-            color: #ffffff;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 4px;
-          }
-          .footer {
-            padding: 30px;
-            text-align: center;
-            background-color: #0d0809;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 11px;
-            color: rgba(229, 233, 234, 0.4);
-          }
-          .footer a {
-            color: #00f2ff;
-            text-decoration: none;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1 class="logo-text">play me</h1>
-          </div>
-          <div class="content">
-            <h1>Hey ${name}, welcome to the club! 🎧</h1>
-            <p>Your Playme account is officially verified. Get ready to experience your music catalog with absolute premium fidelity, completely interactive AI layers, and an offline-first sync engine.</p>
-            <p>We are stoked to have you here. To celebrate, your account has been unlocked with <span class="highlight">Unlimited Offline Downloader Credits</span> so you can cache any playlist from YouTube straight into your secure local vault.</p>
-            
-            <div style="text-align: center;">
-              <a href="${process.env.APP_URL || 'http://localhost:3000'}" class="btn">Launch Playme App</a>
-            </div>
-
-            <div class="features">
-              <div class="feature-item">
-                <div class="feature-title">⚡ Smart Offline Cache</div>
-                <p style="margin: 0; font-size: 12px; color: rgba(229, 233, 234, 0.55);">Download and play high-fidelity music offline without active connectivity. Safe & local.</p>
-              </div>
-              <div class="feature-item">
-                <div class="feature-title">🧠 Bilingual AI Music Tutor</div>
-                <p style="margin: 0; font-size: 12px; color: rgba(229, 233, 234, 0.55);">Translate and unlock cultural background trivia about any song in real-time.</p>
-              </div>
-              <div class="feature-item">
-                <div class="feature-title">🔮 Mood Playlist DJ</div>
-                <p style="margin: 0; font-size: 12px; color: rgba(229, 233, 234, 0.55);">Simply describe your vibe and let our server-side neural nets generate the soundtrack.</p>
-              </div>
-            </div>
-
-            <p style="margin-bottom: 0;">Turn it up,<br><strong>The Playme Team</strong></p>
-          </div>
-          <div class="footer">
-            <p style="margin: 0 0 10px 0;">This email is sent on behalf of Playme AccessPortal. If you did not create an account, please disregard.</p>
-            <p style="margin: 0;">© 2026 Playme Music. All rights reserved. <a href="#">Privacy Policy</a> • <a href="#">Terms</a></p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
+  const welcomeTemplate = getWelcomeEmailHtml(name);
 
   try {
     await transporter.sendMail({
-      from: `"Playme Music" <playmeshow07@gmail.com>`,
+      from: `"Playme Music (No Reply)" <playmeshow07@gmail.com>`,
       to: email,
       subject: "Welcome to Playme. — Your AI Music Vault is Ready! 🎧",
       html: welcomeTemplate,
@@ -2122,126 +1986,11 @@ app.post("/api/email/recovery", async (req, res) => {
 
   const code = recoveryCode || Math.random().toString(36).substring(2, 8).toUpperCase();
 
-  const recoveryTemplate = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Reset Playme Security Keys</title>
-        <style>
-          body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background-color: #0b0708;
-            margin: 0;
-            padding: 0;
-            color: #e5e9ea;
-          }
-          .container {
-            max-width: 600px;
-            margin: 30px auto;
-            background: linear-gradient(135deg, #150d10 0%, #0c0809 100%);
-            border: 1px solid rgba(0, 242, 255, 0.15);
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-          }
-          .header {
-            padding: 40px 30px;
-            text-align: center;
-            background: linear-gradient(90deg, #12090c 0%, #0e1c1c 100%);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-          }
-          .logo-text {
-            font-size: 32px;
-            font-weight: 800;
-            letter-spacing: -1.5px;
-            background: linear-gradient(135deg, #00f2ff 0%, #ff007f 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin: 0;
-            display: inline-block;
-          }
-          .content {
-            padding: 40px 35px;
-            line-height: 1.6;
-          }
-          h1 {
-            font-size: 22px;
-            margin-top: 0;
-            color: #ffffff;
-            font-weight: 700;
-          }
-          p {
-            font-size: 14px;
-            color: rgba(229, 233, 234, 0.75);
-            margin: 16px 0;
-          }
-          .code-box {
-            background-color: rgba(255, 255, 255, 0.03);
-            border: 1px dashed rgba(0, 242, 255, 0.3);
-            border-radius: 16px;
-            padding: 20px;
-            text-align: center;
-            font-size: 24px;
-            font-weight: 800;
-            color: #00f2ff;
-            letter-spacing: 6px;
-            font-family: monospace;
-            margin: 30px 0;
-            box-shadow: inset 0 0 15px rgba(0, 242, 255, 0.05);
-          }
-          .btn {
-            display: inline-block;
-            background: linear-gradient(90deg, #00f2ff 0%, #ff007f 100%);
-            color: #ffffff !important;
-            text-decoration: none;
-            padding: 14px 32px;
-            font-size: 13px;
-            font-weight: 700;
-            border-radius: 16px;
-            margin: 10px 0 25px 0;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 15px rgba(255, 0, 127, 0.25);
-          }
-          .footer {
-            padding: 30px;
-            text-align: center;
-            background-color: #0d0809;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 11px;
-            color: rgba(229, 233, 234, 0.4);
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1 class="logo-text">play me</h1>
-          </div>
-          <div class="content">
-            <h1>Reset your security credentials 🔑</h1>
-            <p>We received a request to recover the security keys for your Playme account. If you did not initiate this request, you can safely ignore this email; your password remains secure.</p>
-            <p>To set new account credentials, use the verification security code below in your AccessPortal:</p>
-            
-            <div class="code-box">${code}</div>
-
-            <p style="font-size: 12px; color: rgba(229, 233, 234, 0.55); margin-top: -10px; margin-bottom: 25px; text-align: center;">This code will remain active for 15 minutes before expiring.</p>
-
-            <p style="margin-bottom: 0;">Play secure,<br><strong>The Playme Team</strong></p>
-          </div>
-          <div class="footer">
-            <p style="margin: 0 0 10px 0;">This email is sent on behalf of Playme AccessPortal. If you did not request a password recovery, please ignore.</p>
-            <p style="margin: 0;">© 2026 Playme Music. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
+  const recoveryTemplate = getRecoveryCodeEmailHtml(code);
 
   try {
     await transporter.sendMail({
-      from: `"Playme Music" <playmeshow07@gmail.com>`,
+      from: `"Playme Music (No Reply)" <playmeshow07@gmail.com>`,
       to: email,
       subject: `Reset your Playme security keys: ${code} 🔑`,
       html: recoveryTemplate,
@@ -2265,6 +2014,17 @@ function authenticateToken(req: any, res: any, next: any) {
   
   jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
     if (err) return res.status(403).json({ error: "Invalid or expired token" });
+    
+    // Check if session is still valid (if the token has a sessionId)
+    if (user.sessionId && !userDb.isValidSession(user.id, user.sessionId)) {
+      return res.status(401).json({ error: "Session expired or revoked" });
+    }
+    
+    // Update last activity
+    if (user.sessionId) {
+      userDb.updateSessionActivity(user.id, user.sessionId);
+    }
+    
     req.user = user;
     next();
   });
@@ -2292,30 +2052,34 @@ app.post("/api/auth/signup", async (req, res) => {
     
     const user = userDb.create(name, email, passwordHash);
     
+    // Generate Session
+    const sessionId = crypto.randomUUID();
+    const ua = new UAParser(req.headers['user-agent'] || '');
+    const browser = ua.getBrowser();
+    const os = ua.getOS();
+    const device = ua.getDevice();
+    const deviceInfo = device.type === 'mobile' ? 'Mobile' : 'Desktop';
+    const osName = os.name ? `${os.name} ${os.version || ''}`.trim() : 'Unknown OS';
+    const browserName = browser.name ? `${browser.name} ${browser.version || ''}`.trim() : 'Unknown Browser';
+    
+    userDb.addSession(user.id, {
+      sessionId,
+      deviceInfo,
+      os: osName,
+      browser: browserName,
+      ipAddress: (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress || 'Unknown IP',
+      loginTime: Date.now(),
+      lastActive: Date.now()
+    });
+    
     // Generate JWT
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: user.id, email: user.email, sessionId }, JWT_SECRET, { expiresIn: "7d" });
     
     // Send welcome email using Nodemailer
     if (transporter) {
-      const welcomeTemplate = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <title>Welcome to Playme.</title>
-          </head>
-          <body style="font-family: sans-serif; background-color: #0b0708; color: #e5e9ea; padding: 20px;">
-            <div style="max-width: 600px; margin: 0 auto; background: #150d10; padding: 30px; border-radius: 16px; border: 1px solid rgba(0, 242, 255, 0.1);">
-              <h2 style="color: #00f2ff;">Hey ${name}, welcome to the club! 🎧</h2>
-              <p>Your Playme account has been created successfully. Get ready to experience your music catalog with absolute premium fidelity, completely interactive AI layers, and an offline-first sync engine.</p>
-              <p>We are stoked to have you here. Turn it up!</p>
-              <p><strong>The Playme Team</strong></p>
-            </div>
-          </body>
-        </html>
-      `;
+      const welcomeTemplate = getWelcomeEmailHtml(name);
       transporter.sendMail({
-        from: `"Playme Music" <playmeshow07@gmail.com>`,
+        from: `"Playme Music (No Reply)" <playmeshow07@gmail.com>`,
         to: user.email,
         subject: "Welcome to Playme. — Your AI Music Vault is Ready! 🎧",
         html: welcomeTemplate,
@@ -2362,8 +2126,28 @@ app.post("/api/auth/login", async (req, res) => {
     // Update last login
     userDb.update(user.id, { lastLogin: Date.now() });
 
+    // Generate Session
+    const sessionId = crypto.randomUUID();
+    const ua = new UAParser(req.headers['user-agent'] || '');
+    const browser = ua.getBrowser();
+    const os = ua.getOS();
+    const device = ua.getDevice();
+    const deviceInfo = device.type === 'mobile' ? 'Mobile' : 'Desktop';
+    const osName = os.name ? `${os.name} ${os.version || ''}`.trim() : 'Unknown OS';
+    const browserName = browser.name ? `${browser.name} ${browser.version || ''}`.trim() : 'Unknown Browser';
+    
+    userDb.addSession(user.id, {
+      sessionId,
+      deviceInfo,
+      os: osName,
+      browser: browserName,
+      ipAddress: (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress || 'Unknown IP',
+      loginTime: Date.now(),
+      lastActive: Date.now()
+    });
+
     // Generate JWT
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: user.id, email: user.email, sessionId }, JWT_SECRET, { expiresIn: "7d" });
 
     res.json({
       token,
@@ -2407,6 +2191,45 @@ app.get("/api/auth/me", authenticateToken, (req: any, res) => {
   }
 });
 
+// Session Management API
+app.get("/api/auth/sessions", authenticateToken, (req: any, res) => {
+  try {
+    const sessions = userDb.getSessions(req.user.id);
+    res.json({
+      sessions,
+      currentSessionId: req.user.sessionId || null
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.delete("/api/auth/sessions/:sessionId", authenticateToken, (req: any, res) => {
+  try {
+    const { sessionId } = req.params;
+    if (sessionId === req.user.sessionId) {
+      return res.status(400).json({ error: "Cannot delete current session this way. Use logout." });
+    }
+    userDb.removeSession(req.user.id, sessionId);
+    res.json({ success: true, message: "Session revoked" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.delete("/api/auth/sessions", authenticateToken, (req: any, res) => {
+  try {
+    if (req.user.sessionId) {
+      userDb.clearSessions(req.user.id, req.user.sessionId);
+    } else {
+      userDb.clearSessions(req.user.id);
+    }
+    res.json({ success: true, message: "All other sessions revoked" });
+  } catch (err: any) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // 4. POST /api/auth/send-verification
 app.post("/api/auth/send-verification", authenticateToken, async (req: any, res) => {
   try {
@@ -2426,20 +2249,10 @@ app.post("/api/auth/send-verification", authenticateToken, async (req: any, res)
       const verifyLink = `${protocol}://${host}/?verify_token=${verificationToken}`;
       
       const mailOptions = {
-        from: `"Playme Music" <playmeshow07@gmail.com>`,
+        from: `"Playme Music (No Reply)" <playmeshow07@gmail.com>`,
         to: user.email,
         subject: "Playme - Verify Your Email",
-        html: `
-          <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 25px; border: 1px solid rgba(255,255,255,0.05); background: #150d10; color: #e5e9ea; border-radius: 12px;">
-            <h2 style="color: #00f2ff; text-align: center;">Verify Your Playme Account</h2>
-            <p>Greetings ${user.name},</p>
-            <p>Thank you for joining Playme. Click the button below to verify your email address and unlock full dashboard features. This link expires in 24 hours.</p>
-            <div style="text-align: center; margin: 25px 0;">
-              <a href="${verifyLink}" style="background-color: #00f2ff; color: #000; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Verify Email</a>
-            </div>
-            <p style="font-size: 11px; color: #777;">If you did not request this, you can ignore this email safely.</p>
-          </div>
-        `
+        html: getVerificationEmailHtml(user.name, verifyLink)
       };
       await transporter.sendMail(mailOptions);
       console.log(`[SMTP] Verification email sent to:`, user.email);
@@ -2579,31 +2392,20 @@ app.post("/api/auth/forgot", async (req, res) => {
       return res.json({ message: "If that email exists, we have sent a password reset link." });
     }
 
-    const resetToken = crypto.randomBytes(20).toString("hex");
+    const resetToken = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
     const resetTokenExpiry = Date.now() + 3600000; // 1 hour
 
     userDb.update(user.id, { resetToken, resetTokenExpiry });
 
     if (transporter) {
-      const resetLink = `${req.protocol}://${req.get("host")}/?reset_token=${resetToken}`;
       const mailOptions = {
-        from: `"Playme Music" <playmeshow07@gmail.com>`,
+        from: `"Playme Music (No Reply)" <playmeshow07@gmail.com>`,
         to: user.email,
-        subject: "Playme - Reset Your Password",
-        html: `
-          <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 25px; border: 1px solid rgba(255,255,255,0.05); background: #150d10; color: #e5e9ea; border-radius: 12px;">
-            <h2 style="color: #00f2ff; text-align: center;">Playme Vault Recovery</h2>
-            <p>Greetings ${user.name},</p>
-            <p>We received a request to recover your password keys. Click the button below to reset your password. This link expires in 1 hour.</p>
-            <div style="text-align: center; margin: 25px 0;">
-              <a href="${resetLink}" style="background-color: #00f2ff; color: #000; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reset Password</a>
-            </div>
-            <p style="font-size: 11px; color: #777;">If you did not request this, you can ignore this email safely.</p>
-          </div>
-        `
+        subject: "Playme - Your Password Reset OTP",
+        html: getForgotOtpEmailHtml(user.name, resetToken)
       };
       await transporter.sendMail(mailOptions);
-      console.log(`[SMTP] Recovery link sent to:`, user.email);
+      console.log(`[SMTP] Recovery OTP sent to:`, user.email);
     }
 
     res.json({ message: "If that email exists, we have sent a password reset link." });
@@ -2615,9 +2417,9 @@ app.post("/api/auth/forgot", async (req, res) => {
 
 // 8. POST /api/auth/reset
 app.post("/api/auth/reset", async (req, res) => {
-  const { token, password } = req.body;
-  if (!token || !password) {
-    return res.status(400).json({ error: "Token and password are required" });
+  const { email, otp, password } = req.body;
+  if (!email || !otp || !password) {
+    return res.status(400).json({ error: "Email, OTP, and new password are required" });
   }
 
   if (password.length < 6) {
@@ -2625,21 +2427,25 @@ app.post("/api/auth/reset", async (req, res) => {
   }
 
   try {
-    const user = userDb.findByResetToken(token);
+    const user = userDb.findByEmail(email);
     if (!user) {
-      return res.status(400).json({ error: "Invalid or expired reset token" });
+      return res.status(400).json({ error: "Invalid or expired OTP" });
+    }
+
+    if (user.resetToken !== otp || !user.resetTokenExpiry || user.resetTokenExpiry < Date.now()) {
+      return res.status(400).json({ error: "Invalid or expired OTP" });
     }
 
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    userDb.update(user.id, {
-      passwordHash,
-      resetToken: undefined,
-      resetTokenExpiry: undefined
+    userDb.update(user.id, { 
+      passwordHash, 
+      resetToken: undefined, 
+      resetTokenExpiry: undefined 
     });
 
-    res.json({ message: "Password reset successfully. You can now log in." });
+    res.json({ success: true, message: "Password updated successfully" });
   } catch (err: any) {
     console.error("[Auth API] Reset password failed:", err);
     res.status(500).json({ error: "Internal server error" });

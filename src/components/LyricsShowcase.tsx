@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useAudioPlayer } from './AudioPlayerContext';
+import { useAudioPlayer, useAudioTime } from './AudioPlayerContext';
 import { fetchSyncedLyrics, getActiveLyricIndex, type SyncedLyricLine, type LyricsResult } from '../lib/lyrics';
 import { motion, AnimatePresence } from 'motion/react';
 import { WordByWordLine } from './WordByWordLine';
@@ -32,8 +32,6 @@ export type LyricStyleModeType = 'karaoke' | 'kinetic' | 'retro-card';
 export const LyricsShowcase: React.FC = () => {
   const { 
     currentTrack, 
-    currentTime, 
-    duration, 
     isPlaying, 
     togglePlay, 
     seek,
@@ -42,6 +40,8 @@ export const LyricsShowcase: React.FC = () => {
     lyricsOffset,
     setLyricsOffset
   } = useAudioPlayer();
+
+  const { currentTime, duration } = useAudioTime();
 
   const [styleMode, setStyleMode] = useState<LyricStyleModeType>('karaoke');
   const [backgroundEffect, setBackgroundEffect] = useState<boolean>(true);

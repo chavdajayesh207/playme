@@ -5,6 +5,16 @@ import crypto from "crypto";
 const DATA_DIR = path.join(process.cwd(), "server_data");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 
+export interface SessionRecord {
+  sessionId: string;
+  deviceInfo: string;
+  os: string;
+  browser: string;
+  ipAddress: string;
+  loginTime: number;
+  lastActive: number;
+}
+
 export interface UserRecord {
   id: string;
   name: string;
@@ -23,6 +33,7 @@ export interface UserRecord {
   favorites?: string[];
   history?: any[];
   followedArtists?: string[];
+  sessions?: SessionRecord[];
 }
 
 class UserDb {
@@ -109,7 +120,8 @@ class UserDb {
       lastLogin: now,
       favorites: [],
       history: [],
-      followedArtists: []
+      followedArtists: [],
+      sessions: []
     };
     this.users[id] = user;
     this.save();
@@ -125,6 +137,58 @@ class UserDb {
     };
     this.save();
     return this.users[id];
+  }
+
+  // --- Session Management ---
+
+  public addSession(userId: string, session: SessionRecord): void {
+    const user = this.users[userId];
+    if (user) {
+      if (!user.sessions) user.sessions = [];
+      user.sessions.push(session);
+      this.save();
+    }
+  }
+
+  public removeSession(userId: string, sessionId: string): void {
+    const user = this.users[userId];
+    if (user && user.sessions) {
+      user.sessions = user.sessions.filter(s => s.sessionId !== sessionId);
+      this.save();
+    }
+  }
+
+  public clearSessions(userId: string, exceptSessionId?: string): void {
+    const user = this.users[userId];
+    if (user) {
+      if (exceptSessionId && user.sessions) {
+        user.sessions = user.sessions.filter(s => s.sessionId === exceptSessionId);
+      } else {
+        user.sessions = [];
+      }
+      this.save();
+    }
+  }
+
+  public getSessions(userId: string): SessionRecord[] {
+    return this.users[userId]?.sessions || [];
+  }
+
+  public updateSessionActivity(userId: string, sessionId: string): void {
+    const user = this.users[userId];
+    if (user && user.sessions) {
+      const session = user.sessions.find(s => s.sessionId === sessionId);
+      if (session) {
+        session.lastActive = Date.now();
+        this.save();
+      }
+    }
+  }
+
+  public isValidSession(userId: string, sessionId: string): boolean {
+    const user = this.users[userId];
+    if (!user || !user.sessions) return false;
+    return user.sessions.some(s => s.sessionId === sessionId);
   }
 }
 

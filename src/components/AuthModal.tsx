@@ -27,6 +27,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<AuthTab>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [otp, setOtp] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -35,13 +37,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (isOpen) {
-      const urlParams = new URLSearchParams(window.location.search);
-      const token = urlParams.get('reset_token');
-      if (token) {
-        setActiveTab('reset');
-      } else {
-        setActiveTab('login');
-      }
+      setActiveTab('login');
       setError(null);
       setSuccess(null);
     }
@@ -50,6 +46,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const clearForm = () => {
     setEmail('');
     setPassword('');
+    setConfirmPassword('');
+    setOtp('');
     setName('');
     setError(null);
     setSuccess(null);
@@ -121,7 +119,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setError(null);
     try {
       await resetPassword(email);
-      setSuccess('Password recovery email dispatched successfully! Check your inbox.');
+      setSuccess('OTP sent successfully! Check your inbox.');
+      setTimeout(() => {
+        setActiveTab('reset');
+        setSuccess(null);
+      }, 1500);
     } catch (err: any) {
       setError(err?.message || 'Unable to locate account with this email.');
     } finally {
@@ -131,28 +133,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('reset_token');
-    if (!token) {
-      setError('Reset token is missing. Please click the reset link in your email again.');
+    if (!otp) {
+      setError('Please enter the 6-digit OTP sent to your email.');
       return;
     }
     if (password.length < 6) {
       setError('Password must be at least 6 characters.');
       return;
     }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      await resetPasswordConfirm(token, password);
+      await resetPasswordConfirm(email, otp, password);
       setSuccess('Password updated successfully! Redirecting to login...');
-      window.history.replaceState({}, document.title, window.location.pathname);
       setTimeout(() => {
         setActiveTab('login');
         clearForm();
       }, 2000);
     } catch (err: any) {
-      setError(err?.message || 'Failed to reset password. Link might be expired.');
+      setError(err?.message || 'Failed to reset password. OTP might be invalid or expired.');
     } finally {
       setLoading(false);
     }
@@ -429,6 +432,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 >
                   <div className="flex flex-col gap-1.5">
                     <label className={`text-[10px] font-mono uppercase tracking-widest font-semibold transition-colors duration-300 ${
+                      focusedField === 'otp' ? 'text-[#00f2ff]' : 'text-white/40'
+                    }`}>
+                      6-Digit OTP
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="123456"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      onFocus={() => setFocusedField('otp')}
+                      onBlur={() => setFocusedField(null)}
+                      required
+                      className="w-full bg-black/50 border border-white/10 rounded-full px-5 py-3.5 text-xs text-white focus:outline-none focus:border-[#00f2ff]/50 placeholder:text-white/20 font-sans transition-all tracking-[5px]"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className={`text-[10px] font-mono uppercase tracking-widest font-semibold transition-colors duration-300 ${
                       focusedField === 'password' ? 'text-[#00f2ff]' : 'text-white/40'
                     }`}>
                       New Password
@@ -439,6 +460,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       onFocus={() => setFocusedField('password')}
+                      onBlur={() => setFocusedField(null)}
+                      required
+                      className="w-full bg-black/50 border border-white/10 rounded-full px-5 py-3.5 text-xs text-white focus:outline-none focus:border-[#00f2ff]/50 placeholder:text-white/20 font-sans transition-all"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className={`text-[10px] font-mono uppercase tracking-widest font-semibold transition-colors duration-300 ${
+                      focusedField === 'confirmPassword' ? 'text-[#00f2ff]' : 'text-white/40'
+                    }`}>
+                      Confirm Password
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onFocus={() => setFocusedField('confirmPassword')}
                       onBlur={() => setFocusedField(null)}
                       required
                       className="w-full bg-black/50 border border-white/10 rounded-full px-5 py-3.5 text-xs text-white focus:outline-none focus:border-[#00f2ff]/50 placeholder:text-white/20 font-sans transition-all"

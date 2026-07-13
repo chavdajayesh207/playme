@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { useAudioPlayer } from './AudioPlayerContext';
+import { useAudioPlayer, useAudioTime } from './AudioPlayerContext';
 import { TRACKS } from '../data';
 import { Track } from '../types';
 import { Visualizer } from './Visualizer';
@@ -27,8 +27,6 @@ export const ImmersivePlayerView: React.FC = () => {
   const {
     currentTrack,
     isPlaying,
-    currentTime,
-    duration,
     volume,
     isShuffle,
     isRepeat,
@@ -45,6 +43,8 @@ export const ImmersivePlayerView: React.FC = () => {
     isFavorite,
     queue
   } = useAudioPlayer();
+
+  const { currentTime, duration } = useAudioTime();
 
   const tracksList = queue && queue.length > 0 ? queue : TRACKS;
   let activeIndex = currentTrack ? tracksList.findIndex((t) => t.id === currentTrack.id) : 0;

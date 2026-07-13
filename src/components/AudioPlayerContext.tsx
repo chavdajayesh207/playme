@@ -13,8 +13,6 @@ import { useAuth } from './AuthContext';
 interface AudioPlayerContextType {
   currentTrack: Track;
   isPlaying: boolean;
-  currentTime: number;
-  duration: number;
   volume: number;
   isShuffle: boolean;
   isRepeat: boolean;
@@ -73,6 +71,20 @@ interface AudioPlayerContextType {
 }
 
 const AudioPlayerContext = createContext<AudioPlayerContextType | undefined>(undefined);
+export interface AudioTimeContextType {
+  currentTime: number;
+  duration: number;
+}
+export const AudioTimeContext = createContext<AudioTimeContextType | undefined>(undefined);
+
+export const useAudioTime = () => {
+  const context = useContext(AudioTimeContext);
+  if (!context) {
+    throw new Error('useAudioTime must be used within an AudioTimeProvider');
+  }
+  return context;
+};
+
 
 const StableYoutubeIframe = React.memo(() => {
   return (
@@ -1537,8 +1549,6 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       value={{
         currentTrack,
         isPlaying,
-        currentTime,
-        duration,
         volume,
         isShuffle,
         isRepeat,
@@ -1596,6 +1606,7 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         continueMyMood,
       }}
     >
+      <AudioTimeContext.Provider value={{ currentTime, duration }}>
       {children}
       <audio
         ref={audioRef}
@@ -1692,6 +1703,7 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         </div>
         <StableYoutubeIframe />
       </div>
+          </AudioTimeContext.Provider>
     </AudioPlayerContext.Provider>
   );
 };
