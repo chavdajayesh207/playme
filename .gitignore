@@ -19,3 +19,4 @@ coverage/
 *.log
 .env*
 !.env.example
+server_data/

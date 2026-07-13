@@ -166,33 +166,33 @@ export const SongActionsMenu: React.FC<SongActionsMenuProps> = ({ track, classNa
 
       {/* Dropdown Card */}
       {isOpen && (
-        <div className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} ${direction === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'} w-56 rounded-2xl bg-black/90 backdrop-blur-xl border border-white/10 shadow-2xl p-1.5 z-50 animate-fade-in select-none`}>
+        <div className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} ${direction === 'up' ? 'bottom-full mb-3' : 'top-full mt-3'} w-56 rounded-2xl bg-black/40 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.8)] p-2 z-50 animate-fade-in select-none`}>
           {!showPlaylistsSubmenu ? (
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-1">
               {/* Play Next */}
               <button
                 onClick={handlePlayNext}
-                className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/5 flex items-center gap-2.5 transition-all cursor-pointer"
+                className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] flex items-center gap-3 transition-all cursor-pointer"
               >
-                <Play size={14} className="text-emerald-400" />
+                <Play size={15} className="text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
                 <span>Play Next</span>
               </button>
 
               {/* Add to Queue */}
               <button
                 onClick={handleAddToQueue}
-                className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/5 flex items-center gap-2.5 transition-all cursor-pointer"
+                className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] flex items-center gap-3 transition-all cursor-pointer"
               >
-                <Plus size={14} className="text-[#00f2ff]" />
+                <Plus size={15} className="text-[#00f2ff] drop-shadow-[0_0_8px_rgba(0,242,255,0.5)]" />
                 <span>Add to Queue</span>
               </button>
 
               {/* Toggle Favorite */}
               <button
                 onClick={handleToggleFavorite}
-                className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/5 flex items-center gap-2.5 transition-all cursor-pointer"
+                className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] flex items-center gap-3 transition-all cursor-pointer"
               >
-                <Heart size={14} className={isLiked ? 'fill-pink-500 text-pink-500' : 'text-pink-400'} />
+                <Heart size={15} className={isLiked ? 'fill-pink-500 text-pink-500 drop-shadow-[0_0_8px_rgba(236,72,153,0.5)]' : 'text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.3)]'} />
                 <span>{isLiked ? 'Liked Song' : 'Like Song'}</span>
               </button>
 
@@ -202,34 +202,34 @@ export const SongActionsMenu: React.FC<SongActionsMenuProps> = ({ track, classNa
                   e.stopPropagation();
                   setShowPlaylistsSubmenu(true);
                 }}
-                className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/5 flex items-center justify-between transition-all cursor-pointer"
+                className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] flex items-center justify-between transition-all cursor-pointer group"
               >
-                <div className="flex items-center gap-2.5">
-                  <Bookmark size={14} className="text-purple-400" />
+                <div className="flex items-center gap-3">
+                  <Bookmark size={15} className="text-purple-400 drop-shadow-[0_0_8px_rgba(167,139,250,0.5)]" />
                   <span>Add to Playlist</span>
                 </div>
-                <span className="text-[10px] opacity-45">▶</span>
+                <span className="text-[10px] opacity-40 group-hover:opacity-100 transition-opacity group-hover:translate-x-1 duration-300">▶</span>
               </button>
 
               {/* Toggle Demo Status */}
               <button
                 onClick={handleToggleDemo}
-                className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/5 flex items-center gap-2.5 transition-all cursor-pointer"
+                className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] flex items-center gap-3 transition-all cursor-pointer"
               >
-                <Sparkles size={14} className={isDemo ? 'text-amber-400 fill-amber-400' : 'text-amber-400'} />
+                <Sparkles size={15} className={isDemo ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]' : 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]'} />
                 <span>{isDemo ? 'Remove Demo Badge' : 'Mark as Demo Track'}</span>
               </button>
 
               {/* YouTube Downloads */}
               {track.isYoutube && !track.isOffline && (
                 <>
-                  <div className="border-t border-white/5 my-1" />
+                  <div className="border-t border-white/10 my-1.5 mx-2 shadow-[0_1px_0_rgba(0,0,0,0.5)]" />
                   <button
                     disabled={isDownloading}
                     onClick={(e) => handleDownload(e, 'mp3')}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/5 flex items-center gap-2.5 transition-all cursor-pointer disabled:opacity-50"
+                    className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] flex items-center gap-3 transition-all cursor-pointer disabled:opacity-50"
                   >
-                    <Download size={14} className={user ? "text-[#00f2ff]" : "text-gray-500"} />
+                    <Download size={15} className={user ? "text-[#00f2ff] drop-shadow-[0_0_8px_rgba(0,242,255,0.5)]" : "text-gray-500"} />
                     <span>
                       {isDownloading ? `Downloading MP3 (${downloadProgress}%)` : 'Download Offline MP3'}
                     </span>
@@ -238,9 +238,9 @@ export const SongActionsMenu: React.FC<SongActionsMenuProps> = ({ track, classNa
                   <button
                     disabled={isDownloading}
                     onClick={(e) => handleDownload(e, 'mp4')}
-                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/5 flex items-center gap-2.5 transition-all cursor-pointer disabled:opacity-50"
+                    className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] flex items-center gap-3 transition-all cursor-pointer disabled:opacity-50"
                   >
-                    <Download size={14} className={user ? "text-pink-400" : "text-gray-500"} />
+                    <Download size={15} className={user ? "text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.5)]" : "text-gray-500"} />
                     <span>
                       {isDownloading ? `Downloading MP4 (${downloadProgress}%)` : 'Download Offline MP4'}
                     </span>
@@ -250,51 +250,52 @@ export const SongActionsMenu: React.FC<SongActionsMenuProps> = ({ track, classNa
 
               {/* Delete uploaded track fallback */}
               {track.isOffline && (
-                <div className="border-t border-white/5 my-1" />
+                <div className="border-t border-white/10 my-1.5 mx-2 shadow-[0_1px_0_rgba(0,0,0,0.5)]" />
               )}
               {track.isOffline && (
                 <button
                   onClick={handleDeleteTrack}
-                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/10 flex items-center gap-2.5 transition-all cursor-pointer"
+                  className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/10 hover:shadow-[inset_0_1px_0_rgba(239,68,68,0.1)] flex items-center gap-3 transition-all cursor-pointer"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={15} />
                   <span>{track.isYoutube ? 'Remove Offline Cache' : 'Delete Upload'}</span>
                 </button>
               )}
             </div>
           ) : (
             /* Custom Playlists selection Submenu */
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-1">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowPlaylistsSubmenu(false);
                 }}
-                className="w-full text-left px-3 py-1.5 rounded-xl text-[10px] font-bold text-pink-500 uppercase tracking-widest hover:bg-white/5 flex items-center gap-2.5 transition-all cursor-pointer"
+                className="w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold text-pink-500 uppercase tracking-widest hover:bg-white/10 flex items-center gap-3 transition-all cursor-pointer group"
               >
-                <span>◀ Back to Menu</span>
+                <span className="group-hover:-translate-x-1 transition-transform duration-300">◀</span>
+                <span>Back to Menu</span>
               </button>
-              <div className="border-b border-white/5 my-1" />
+              <div className="border-b border-white/10 my-1.5 mx-2 shadow-[0_1px_0_rgba(0,0,0,0.5)]" />
 
               {playlists.length === 0 ? (
-                <div className="px-3 py-3 text-center text-[10px] text-white/40 italic">
+                <div className="px-3 py-4 text-center text-[10px] text-white/50 italic bg-black/20 rounded-xl mx-2">
                   No Playlists created yet. Create one inside the library tab!
                 </div>
               ) : (
-                <div className="max-h-48 overflow-y-auto scrollbar-thin">
+                <div className="max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 pr-1">
                   {playlists.map((playlist) => {
                     const isInPlaylist = playlist.trackIds.includes(track.id);
                     return (
                       <button
                         key={playlist.id}
                         onClick={(e) => handlePlaylistClick(e, playlist.id, isInPlaylist)}
-                        className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/5 flex items-center justify-between transition-all cursor-pointer"
+                        className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] flex items-center justify-between transition-all cursor-pointer"
                       >
-                        <div className="flex items-center gap-2 truncate">
-                          <Music size={12} className="text-[#00f2ff] shrink-0" />
+                        <div className="flex items-center gap-3 truncate">
+                          <Music size={14} className="text-[#00f2ff] shrink-0 opacity-70" />
                           <span className="truncate">{playlist.name}</span>
                         </div>
-                        {isInPlaylist && <Check size={12} className="text-emerald-400 shrink-0" />}
+                        {isInPlaylist && <Check size={14} className="text-emerald-400 shrink-0 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]" />}
                       </button>
                     );
                   })}

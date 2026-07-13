@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useAudioPlayer } from './AudioPlayerContext';
 import { useAuth } from './AuthContext';
 import { Track } from '../types';
 import { Search, ShoppingCart, ArrowLeft, Home, Music, List, User, Folder, Mic, MoreVertical, Bell, Download, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, EyeOff, AlignLeft, ScrollText, Clock, Minus, Plus, RotateCcw, Repeat, Share2, Camera, Activity, Zap, Crown, ChevronDown, Shuffle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { LiveStageView } from './LiveStageView';
-import { DiscoverView } from './DiscoverView';
-import { CollectionsView } from './CollectionsView';
-import { LibraryView } from './LibraryView';
-import { HomeDashboardView } from './HomeDashboardView';
 import { Logo } from './Logo';
 import { fetchSyncedLyrics, getActiveLyricIndex, type SyncedLyricLine, type LyricsResult } from '../lib/lyrics';
 import { ErrorBoundary } from './ErrorBoundary';
 import { SongActionsMenu } from './SongActionsMenu';
 import { WordByWordLine } from './WordByWordLine';
-import { DownloadModal } from './DownloadModal';
+
+const LiveStageView = lazy(() => import('./LiveStageView').then(m => ({ default: m.LiveStageView })));
+const DiscoverView = lazy(() => import('./DiscoverView').then(m => ({ default: m.DiscoverView })));
+const CollectionsView = lazy(() => import('./CollectionsView').then(m => ({ default: m.CollectionsView })));
+const LibraryView = lazy(() => import('./LibraryView').then(m => ({ default: m.LibraryView })));
+const HomeDashboardView = lazy(() => import('./HomeDashboardView').then(m => ({ default: m.HomeDashboardView })));
+const DownloadModal = lazy(() => import('./DownloadModal').then(m => ({ default: m.DownloadModal })));
 
 enum TabletTab {
   HOME = 'home',
@@ -77,8 +78,16 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
 
   const [activeTab, setActiveTab] = useState<TabletTab>(TabletTab.HOME);
   const [searchQuery, setSearchQuery] = useState('');
-  const [discoverSubTab, setDiscoverSubTab] = useState<'local' | 'global'>('local');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [hasOpenedDownloadModal, setHasOpenedDownloadModal] = useState(false);
+
+  useEffect(() => {
+    if (showDownloadModal) setHasOpenedDownloadModal(true);
+  }, [showDownloadModal]);
+
+  const toggleSidebar = () => { setIsSidebarOpen(!isSidebarOpen); };
+  const [discoverSubTab, setDiscoverSubTab] = useState<'local' | 'global'>('local');
   const [lyricMode, setLyricMode] = useState<LyricMode>('off');
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -160,16 +169,18 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
     setFollowedArtists(prev => {
       const next = { ...prev, [artistName]: !prev[artistName] };
       localStorage.setItem('playme_followed_artists', JSON.stringify(next));
-
-      // Push followed artists to cloud
+      
       const token = localStorage.getItem('playme_auth_token');
       if (token) {
-        const activeFollowed = Object.entries(next).filter(([, v]) => v).map(([k]) => k);
+        const followedArtistsArray = Object.keys(next).filter(k => next[k]);
         fetch('/api/user/sync', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ followedArtists: activeFollowed })
-        }).catch(err => console.warn('[CloudSync] Follow push failed:', err));
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ followedArtists: followedArtistsArray })
+        }).catch(e => console.warn('Cloud sync error for artists:', e));
       }
 
       return next;
@@ -632,13 +643,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
   const activeLyric = tracksLyrics[activeLyricIndex];
   const nextLyric = tracksLyrics[activeLyricIndex + 1];
 
-  // Automatically exit lyric mode if there are no lyrics available for the current track
-  useEffect(() => {
-    if (lyricMode !== 'off' && !isLoadingLyrics && tracksLyrics.length === 0) {
-      setLyricMode('off');
-      if (videoOpacity === 0.12) setVideoOpacity(1.0);
-    }
-  }, [lyricMode, isLoadingLyrics, tracksLyrics.length, videoOpacity, setVideoOpacity]);
+  // Intentionally removed auto-exit lyricMode to allow user to see the lyrics screen even if there are no lyrics
 
   // Sync YouTube Video into Immersive Lyrics Panel
   useEffect(() => {
@@ -759,8 +764,8 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
         )}
       </div>
 
-        {/* Top Header Navigation — Logo left, Search center */}
-        <nav className={`relative z-[35] flex items-center justify-between px-4 md:px-8 py-3 md:py-5 shrink-0 gap-3 md:gap-4 w-full transition-opacity duration-500 ${isPodcastPlayerActive ? 'pointer-events-none' : ''} ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        {/* Top Header Navigation — Logo left, Search center, Premium right */}
+        <nav className={`relative z-[35] flex items-center justify-between px-6 md:px-8 py-4 md:py-5 shrink-0 gap-4 transition-opacity duration-500 ${isPodcastPlayerActive ? 'pointer-events-none' : ''} ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           {/* LEFT: PlayMe Logo */}
           <div 
             onClick={() => {
@@ -772,16 +777,16 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
             className={`flex items-center space-x-2 cursor-pointer group shrink-0 ${lyricMode !== 'off' ? 'pointer-events-none' : 'pointer-events-auto'}`}
             title="Playme Player"
           >
-            <Logo size={28} theme="dark" animate />
-            <ArrowLeft className="hidden md:block w-4 h-4 text-pink-500 group-hover:-translate-x-0.5 transition-transform" />
+            <Logo size={32} theme="dark" animate />
+            <ArrowLeft className="w-4 h-4 text-pink-500 group-hover:-translate-x-0.5 transition-transform" />
           </div>
 
           {/* CENTER: Spotify-style Search Bar */}
-          <div className={`flex-1 w-full max-w-lg mx-auto ${lyricMode !== 'off' ? 'pointer-events-none' : 'pointer-events-auto'}`}>
-            <div className="search-bar-spotify flex items-center px-3 md:px-4 py-2 md:py-2.5 w-full">
+          <div className={`flex-1 max-w-lg mx-auto px-2 ${lyricMode !== 'off' ? 'pointer-events-none' : 'pointer-events-auto'}`}>
+            <div className="search-bar-spotify flex items-center px-4 py-2.5 w-full">
               <Search className="w-4 h-4 text-gray-400 shrink-0" />
               <input 
-                className="bg-transparent border-none focus:ring-0 text-xs md:text-sm w-full ml-2 md:ml-3 placeholder-gray-500 text-white outline-none font-medium" 
+                className="bg-transparent border-none focus:ring-0 text-sm w-full ml-3 placeholder-gray-500 text-white outline-none font-medium" 
                 placeholder="What do you want to play?" 
                 type="text"
                 value={searchQuery}
@@ -799,12 +804,17 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
               />
             </div>
           </div>
+
+          {/* RIGHT: Premium button (Removed) */}
+          <div className={`flex items-center shrink-0 ${isPodcastPlayerActive ? 'pointer-events-none' : 'pointer-events-auto'}`}>
+            <div className="w-10 h-10 pointer-events-none" />
+          </div>
         </nav>
 
         {/* Content Area */}
         <div className="relative z-10 flex-grow flex h-full px-6 md:px-8 items-center overflow-hidden">
           {/* Navigation Bar (Bottom on Mobile, Left Sidebar on Desktop) */}
-          <aside className={`fixed bottom-[max(8px,env(safe-area-inset-bottom))] md:bottom-auto left-1/2 md:left-8 md:top-1/2 -translate-x-1/2 md:-translate-x-0 md:-translate-y-1/2 flex flex-row md:flex-col justify-center z-[100] pointer-events-auto transition-opacity duration-500 w-[95%] md:w-auto ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+          <aside className={`fixed bottom-2 md:bottom-auto left-1/2 md:left-8 md:top-1/2 -translate-x-1/2 md:-translate-x-0 md:-translate-y-1/2 flex flex-row md:flex-col justify-center z-[100] pointer-events-auto transition-opacity duration-500 w-[95%] md:w-auto ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <div className="hidden md:flex mb-4">
               <button 
                 onClick={() => {
@@ -928,7 +938,9 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                     }
                   `}</style>
                   <ErrorBoundary inline>
-                    <HomeDashboardView onBrowseAll={() => handleTabChange(TabletTab.GENRES)} />
+                    <Suspense fallback={<div className="w-full h-full flex items-center justify-center"><div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin"></div></div>}>
+                      <HomeDashboardView onBrowseAll={() => handleTabChange(TabletTab.GENRES)} />
+                    </Suspense>
                   </ErrorBoundary>
                 </div>
               </motion.div>
@@ -988,7 +1000,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                   `}</style>
 
                   {/* FIRST FOLD: The player UI itself */}
-                  <div className={`min-h-[calc(100dvh-120px)] md:min-h-[calc(100vh-140px)] md:h-[calc(100vh-140px)] md:max-h-[calc(100vh-140px)] flex flex-col justify-between w-full pb-[env(safe-area-inset-bottom)] md:pb-8 ${
+                  <div className={`h-[calc(100vh-140px)] min-h-[calc(100vh-140px)] max-h-[calc(100vh-140px)] flex flex-col justify-between w-full pb-8 ${
                     lyricMode === 'off' ? 'pt-12 md:pt-16' : 'pt-2.5 md:pt-4'
                   }`}>
                     {/* Left Controller Panel occupies full width space */}
@@ -1005,7 +1017,10 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                             {lyricMode === 'off' && !isYtActive && (
                               <div className="w-full flex justify-center py-6 md:py-10 animate-floating shrink-0">
                                 <div className="relative group select-none">
-                                  {/* Soft ambient glow removed by user request */}
+                                  {/* Soft ambient glow behind cover */}
+                                  <div 
+                                    className="absolute -inset-1.5 rounded-[24px] bg-gradient-to-r from-pink-500/30 to-purple-600/30 blur-xl opacity-75 group-hover:opacity-100 transition-opacity duration-500"
+                                  />
                                   <img
                                     src={currentTrack.coverUrl || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=60'}
                                     alt={currentTrack.title}
@@ -1016,7 +1031,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                             )}
 
                             {/* ===== IMMERSIVE LYRICS — Amazon Music Style Full Screen Overlay ===== */}
-                            {lyricMode !== 'off' && (isLoadingLyrics || tracksLyrics.length > 0) && (
+                            {lyricMode !== 'off' && (
                               <div className="fixed inset-0 z-[35] bg-black overflow-hidden flex flex-col animate-fade-in"
                                 onClick={(e) => {
                                   const target = e.target as HTMLElement;
@@ -1074,7 +1089,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                                   </div>
 
                                   {/* Right Panel — Lyrics */}
-                                  <div className="flex-grow flex flex-col justify-center overflow-hidden h-full md:w-[55%] pb-8 rounded-[32px] backdrop-hidden md:block blur-[12px]">
+                                  <div className="flex-grow flex flex-col justify-center overflow-hidden h-full md:w-[55%] pb-8 rounded-[32px] backdrop-blur-[12px]">
                                     
                                     {/* SCROLL MODE — Full immersive lyrics */}
                                     {lyricMode === 'scroll' && (
@@ -1082,35 +1097,43 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                                         ref={lyricsScrollRef} 
                                         className="lyrics-immersive-scroll flex flex-col gap-2 px-2 md:px-8 h-full w-full"
                                       >
-                                        <div className="h-[30vh] shrink-0" /> {/* Top padding so active line is centered */}
-                                        {tracksLyrics.map((line, idx) => {
-                                          const isActive = idx === activeLyricIndex;
-                                          const isPast = idx < activeLyricIndex;
-                                          return (
-                                            <p
-                                              key={idx}
-                                              data-lyric-active={isActive ? 'true' : 'false'}
-                                              onClick={() => seek(line.time)}
-                                              className={`lyric-immersive-line ${
-                                                isActive
-                                                  ? 'is-active lyric-immersive-active-anim'
-                                                  : isPast
-                                                    ? 'is-past'
-                                                    : 'is-future'
-                                              }`}
-                                            >
-                                              {line.text}
-                                            </p>
-                                          );
-                                        })}
-                                        <div className="h-[40vh] shrink-0" /> {/* Bottom padding */}
+                                        {tracksLyrics.length === 0 && !isLoadingLyrics ? (
+                                          <div className="h-full flex items-center justify-center">
+                                            <p className="text-white/50 text-xl md:text-2xl font-bold">No lyrics available for this track.</p>
+                                          </div>
+                                        ) : (
+                                          <>
+                                            <div className="h-[30vh] shrink-0" /> {/* Top padding so active line is centered */}
+                                            {tracksLyrics.map((line, idx) => {
+                                              const isActive = idx === activeLyricIndex;
+                                              const isPast = idx < activeLyricIndex;
+                                              return (
+                                                <p
+                                                  key={idx}
+                                                  data-lyric-active={isActive ? 'true' : 'false'}
+                                                  onClick={() => seek(line.time)}
+                                                  className={`w-full text-left py-1 md:py-2 transition-all duration-300 cursor-pointer focus:outline-none flex items-start ${
+                                                    isActive
+                                                      ? 'text-white text-3xl md:text-[2.5rem] leading-tight font-black opacity-100 scale-100 drop-shadow-[0_2px_20px_rgba(255,255,255,0.2)] lyric-immersive-active-anim'
+                                                      : isPast
+                                                        ? 'text-white text-2xl md:text-[1.75rem] font-bold opacity-20 scale-[0.98]'
+                                                        : 'text-white text-2xl md:text-[1.75rem] font-bold opacity-45 scale-[0.98] hover:opacity-60'
+                                                  }`}
+                                                >
+                                                  {line.text}
+                                                </p>
+                                              );
+                                            })}
+                                            <div className="h-[40vh] shrink-0" /> {/* Bottom padding */}
+                                          </>
+                                        )}
                                       </div>
                                     )}
 
                                     {/* LINE MODE — Single active + next preview */}
                                     {lyricMode === 'line' && (
                                       <div className="flex flex-col gap-6 justify-center px-4 md:px-8 h-full">
-                                        <p key={activeLyricIndex} className="lyric-immersive-single lyric-immersive-active-anim select-none">
+                                        <p key={activeLyricIndex} className="lyric-immersive-single lyric-immersive-active-anim select-none text-center md:text-left">
                                           {activeLyric ? (
                                             <WordByWordLine
                                               text={activeLyric.text}
@@ -1122,7 +1145,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                                               inactiveColorClass="text-white/30"
                                             />
                                           ) : (
-                                            isLoadingLyrics ? "✨ Loading lyrics..." : ""
+                                            isLoadingLyrics ? "✨ Loading lyrics..." : <span className="text-white/50 text-xl md:text-2xl font-bold">No lyrics available</span>
                                           )}
                                         </p>
                                         {nextLyric && (
@@ -1174,6 +1197,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                                     <div 
                                       className="flex-grow h-1.5 md:h-2 bg-white/20 rounded-full cursor-pointer relative overflow-hidden group"
                                       onClick={(e) => {
+                                        e.stopPropagation();
                                         const rect = e.currentTarget.getBoundingClientRect();
                                         const pos = (e.clientX - rect.left) / rect.width;
                                         seek(pos * duration);
@@ -1192,26 +1216,26 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                                   {/* Playback Controls Row */}
                                   <div className="flex items-center justify-between px-2 md:px-8 mt-1">
                                     <div className="flex items-center gap-4">
-                                      <button onClick={toggleShuffle} className={`p-2 rounded-full cursor-pointer ${isShuffle ? 'text-[#00f2ff]' : 'text-white/50 hover:text-white'}`}>
+                                      <button onClick={(e) => { e.stopPropagation(); toggleShuffle(); }} className={`p-2 rounded-full cursor-pointer ${isShuffle ? 'text-[#00f2ff]' : 'text-white/50 hover:text-white'}`}>
                                         <Shuffle size={20} />
                                       </button>
-                                      <button onClick={prevTrack} className="p-2 text-white/70 hover:text-white cursor-pointer active:scale-95 transition-transform">
+                                      <button onClick={(e) => { e.stopPropagation(); prevTrack(); }} className="p-2 text-white/70 hover:text-white cursor-pointer active:scale-95 transition-transform">
                                         <SkipBack size={24} />
                                       </button>
                                     </div>
                                     
                                     <button 
-                                      onClick={togglePlay}
+                                      onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                                       className="w-14 h-14 md:w-16 md:h-16 flex items-center justify-center bg-white rounded-full hover:scale-105 active:scale-95 transition-transform text-black cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.3)]"
                                     >
                                       {isPlaying ? <Pause size={28} className="fill-black" /> : <Play size={28} className="fill-black ml-1.5" />}
                                     </button>
 
                                     <div className="flex items-center gap-4">
-                                      <button onClick={nextTrack} className="p-2 text-white/70 hover:text-white cursor-pointer active:scale-95 transition-transform">
+                                      <button onClick={(e) => { e.stopPropagation(); nextTrack(); }} className="p-2 text-white/70 hover:text-white cursor-pointer active:scale-95 transition-transform">
                                         <SkipForward size={24} />
                                       </button>
-                                      <button onClick={toggleRepeat} className={`p-2 rounded-full cursor-pointer ${isRepeat ? 'text-[#00f2ff]' : 'text-white/50 hover:text-white'}`}>
+                                      <button onClick={(e) => { e.stopPropagation(); toggleRepeat(); }} className={`p-2 rounded-full cursor-pointer ${isRepeat ? 'text-[#00f2ff]' : 'text-white/50 hover:text-white'}`}>
                                         <Repeat size={20} />
                                       </button>
                                     </div>
@@ -1225,9 +1249,9 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                               <div className="flex flex-col space-y-1 text-left min-w-0 shrink-0 mt-4 pb-2 animate-fade-in">
                                 <p className={`text-[10px] font-mono uppercase tracking-widest text-pink-500 animate-pulse ${isYtActive ? 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]' : ''}`}>Now Playing</p>
                                 <div className="flex items-center gap-3 flex-wrap">
-                                  <h2 className={`text-xl md:text-2xl font-extrabold text-white select-none capitalize tracking-tight leading-tight truncate ${isYtActive ? 'drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]' : ''}`}>
+                                  <h2 className={`text-base md:text-lg font-extrabold text-white select-none capitalize tracking-tight leading-tight truncate ${isYtActive ? 'drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]' : ''}`}>
                                     {(currentTrack.title || '').toUpperCase()}
-                                    <span className="text-white/40 font-normal text-lg lowercase italic px-1.5 md:px-2">by</span>
+                                    <span className="text-white/40 font-normal lowercase italic px-1.5">by</span>
                                     <span className={`text-[#00f2ff] ${isYtActive ? 'drop-shadow-[0_1px_4px_rgba(0,0,0,0.95)] text-shadow-sm' : 'drop-shadow-[0_0_8px_rgba(0,242,255,0.3)]'}`}>{currentTrack.artist || 'Unknown'}</span>
                                   </h2>
                                   <SongActionsMenu track={currentTrack} />
@@ -1285,12 +1309,12 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                             <button 
                               onClick={togglePlay}
                               id="mavfarm-play-btn"
-                              className="shrink-0 w-16 h-16 md:w-14 md:h-14 bg-pink-500 rounded-full flex items-center justify-center shadow-lg shadow-pink-500/40 hover:scale-105 active:scale-95 transition-all text-white cursor-pointer"
+                              className="w-12 h-12 md:w-14 h-14 bg-pink-500 rounded-full flex items-center justify-center shadow-lg shadow-pink-500/40 hover:scale-105 active:scale-95 transition-all text-white cursor-pointer"
                             >
                               {isPlaying ? (
-                                <Pause className="w-6 h-6 md:w-5 md:h-5 fill-current" />
+                                <Pause className="w-5 h-5 fill-current" />
                               ) : (
-                                <Play className="w-6 h-6 md:w-5 md:h-5 fill-current ml-1.5 md:ml-1" />
+                                <Play className="w-5 h-5 fill-current ml-1" />
                               )}
                             </button>
                             <button 
@@ -1370,23 +1394,21 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                               </button>
                               <button
                                 onClick={() => {
-                                  if (!isLoadingLyrics && tracksLyrics.length === 0) return;
                                   setLyricMode('line');
                                   setVideoOpacity(0.12);
                                 }}
-                                className={`p-1.5 rounded-full transition-all ${lyricMode === 'line' ? 'bg-[#00f2ff]/20 text-[#00f2ff] shadow-sm' : 'text-white/50 hover:text-white/80'} ${!isLoadingLyrics && tracksLyrics.length === 0 ? 'opacity-30 cursor-not-allowed hover:text-white/40' : 'cursor-pointer'}`}
-                                title={!isLoadingLyrics && tracksLyrics.length === 0 ? "No lyrics available" : "Line-by-Line Lyrics"}
+                                className={`p-1.5 rounded-full transition-all cursor-pointer ${lyricMode === 'line' ? 'bg-[#00f2ff]/20 text-[#00f2ff] shadow-sm' : 'text-white/50 hover:text-white/80'}`}
+                                title="Line-by-Line Lyrics"
                               >
                                 <AlignLeft size={11} />
                               </button>
                               <button
                                 onClick={() => {
-                                  if (!isLoadingLyrics && tracksLyrics.length === 0) return;
                                   setLyricMode('scroll');
                                   setVideoOpacity(0.12);
                                 }}
-                                className={`p-1.5 rounded-full transition-all ${lyricMode === 'scroll' ? 'bg-[#00f2ff]/20 text-[#00f2ff] shadow-sm' : 'text-white/50 hover:text-white/80'} ${!isLoadingLyrics && tracksLyrics.length === 0 ? 'opacity-30 cursor-not-allowed hover:text-white/40' : 'cursor-pointer'}`}
-                                title={!isLoadingLyrics && tracksLyrics.length === 0 ? "No lyrics available" : "Full Scrolling Lyrics"}
+                                className={`p-1.5 rounded-full transition-all cursor-pointer ${lyricMode === 'scroll' ? 'bg-[#00f2ff]/20 text-[#00f2ff] shadow-sm' : 'text-white/50 hover:text-white/80'}`}
+                                title="Full Scrolling Lyrics"
                               >
                                 <ScrollText size={11} />
                               </button>
@@ -1427,7 +1449,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                     </div>
 
                     {/* Circular Tracks Carousel Slider */}
-                    <div className="relative flex items-center justify-center space-x-2 md:space-x-4 pb-8 md:pb-12 mt-4 overflow-visible shrink-0" id="artist-carousel">
+                    <div className="relative flex items-center justify-center space-x-2 md:space-x-4 pb-8 md:pb-12 mt-4 overflow-visible" id="artist-carousel">
                       {carouselTracks.map(({ track, indexOffset }, idx) => {
                         const isActive = indexOffset === 0;
 
@@ -1757,10 +1779,12 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                     background: rgba(255, 255, 255, 0.3);
                   }
                 `}</style>
-                {activeTab === TabletTab.LIVE && <ErrorBoundary inline><LiveStageView /></ErrorBoundary>}
-                {activeTab === TabletTab.GENRES && <ErrorBoundary inline><DiscoverView searchQuery={searchQuery} setSearchQuery={setSearchQuery} initialActiveTab={discoverSubTab} onActiveTabChange={setDiscoverSubTab} /></ErrorBoundary>}
-                {activeTab === TabletTab.FAVORITES && <ErrorBoundary inline><CollectionsView onAuthClick={onAuthClick} /></ErrorBoundary>}
-                {activeTab === TabletTab.LIBRARY && <ErrorBoundary inline><LibraryView /></ErrorBoundary>}
+                <Suspense fallback={<div className="w-full h-full flex items-center justify-center"><div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin"></div></div>}>
+                  {activeTab === TabletTab.LIVE && <ErrorBoundary inline><LiveStageView /></ErrorBoundary>}
+                  {activeTab === TabletTab.GENRES && <ErrorBoundary inline><DiscoverView searchQuery={searchQuery} setSearchQuery={setSearchQuery} initialActiveTab={discoverSubTab} onActiveTabChange={setDiscoverSubTab} /></ErrorBoundary>}
+                  {activeTab === TabletTab.FAVORITES && <ErrorBoundary inline><CollectionsView onAuthClick={onAuthClick} /></ErrorBoundary>}
+                  {activeTab === TabletTab.LIBRARY && <ErrorBoundary inline><LibraryView /></ErrorBoundary>}
+                </Suspense>
               </div>
             </motion.div>
             )}
@@ -1768,7 +1792,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
           </div>
 
           {/* Right vertical utility selectors */}
-          <aside className={`hidden md:flex fixed right-6 md:right-8 top-1/2 -translate-y-1/2 flex-col justify-center space-y-4 md:space-y-6 z-50 transition-opacity duration-500 ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+          <aside className={`fixed right-6 md:right-8 top-1/2 -translate-y-1/2 flex flex-col justify-center space-y-4 md:space-y-6 z-50 transition-opacity duration-500 ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <div className="glass-dark-mav px-2.5 md:px-4 py-4 md:py-6 rounded-full flex flex-col items-center space-y-4 md:space-y-6 text-white">
               <button 
                 onClick={() => handleTabChange(TabletTab.LIVE)}
@@ -2018,11 +2042,15 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
             </div>
           </div>
       </div>
-      <DownloadModal 
-        isOpen={showDownloadModal} 
-        onClose={() => setShowDownloadModal(false)} 
-        currentTrack={currentTrack} 
-      />
+      <Suspense fallback={null}>
+        {hasOpenedDownloadModal && (
+          <DownloadModal 
+            isOpen={showDownloadModal} 
+            onClose={() => setShowDownloadModal(false)} 
+            currentTrack={currentTrack} 
+          />
+        )}
+      </Suspense>
     </div>
   );
 };

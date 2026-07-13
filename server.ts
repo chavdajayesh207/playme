@@ -2478,6 +2478,48 @@ app.post("/api/auth/verify", async (req, res) => {
   }
 });
 
+// 5.5. GET /api/user/sync
+app.get("/api/user/sync", authenticateToken, (req: any, res) => {
+  try {
+    const user = userDb.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    return res.json({
+      favorites: user.favorites || [],
+      history: user.history || [],
+      followedArtists: user.followedArtists || []
+    });
+  } catch (err: any) {
+    console.error("[Sync GET] error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// 5.6. POST /api/user/sync
+app.post("/api/user/sync", authenticateToken, express.json({ limit: "5mb" }), (req: any, res) => {
+  try {
+    const user = userDb.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const { favorites, history, followedArtists } = req.body;
+    
+    const updates: any = {};
+    if (Array.isArray(favorites)) updates.favorites = favorites;
+    if (Array.isArray(history)) updates.history = history;
+    if (Array.isArray(followedArtists)) updates.followedArtists = followedArtists;
+
+    userDb.update(user.id, updates);
+
+    return res.json({ success: true });
+  } catch (err: any) {
+    console.error("[Sync POST] error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // 6. POST /api/auth/update-profile
 app.post("/api/auth/update-profile", authenticateToken, async (req: any, res) => {
   const { displayName, phoneNumber } = req.body;
@@ -2600,44 +2642,6 @@ app.post("/api/auth/reset", async (req, res) => {
     res.json({ message: "Password reset successfully. You can now log in." });
   } catch (err: any) {
     console.error("[Auth API] Reset password failed:", err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// ==========================================
-// Cloud Sync API — Cross-Device User Data
-// ==========================================
-
-// GET /api/user/sync — Fetch the user's cloud-saved data
-app.get("/api/user/sync", authenticateToken, (req: any, res: any) => {
-  try {
-    const data = userDb.getUserSyncData(req.user.id);
-    if (!data) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    res.json(data);
-  } catch (err: any) {
-    console.error("[Sync API] GET /api/user/sync failed:", err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// POST /api/user/sync — Save the user's data to cloud
-app.post("/api/user/sync", authenticateToken, (req: any, res: any) => {
-  try {
-    const { favorites, followedArtists, history, settings } = req.body;
-    const updated = userDb.syncUserData(req.user.id, {
-      favorites,
-      followedArtists,
-      history,
-      settings,
-    });
-    if (!updated) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    res.json({ success: true, message: "User data synced to cloud" });
-  } catch (err: any) {
-    console.error("[Sync API] POST /api/user/sync failed:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

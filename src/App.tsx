@@ -3,21 +3,29 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { AudioPlayerProvider, useAudioPlayer } from './components/AudioPlayerContext';
 import { AuthProvider, useAuth } from './components/AuthContext';
-import { AuthModal } from './components/AuthModal';
-import { UserProfilePortal } from './components/UserProfilePortal';
 import { MavFarmView } from './components/MavFarmView';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { PremiumUpgradeModal } from './components/PremiumUpgradeModal';
+
+const AuthModal = lazy(() => import('./components/AuthModal').then(m => ({ default: m.AuthModal })));
+const UserProfilePortal = lazy(() => import('./components/UserProfilePortal').then(m => ({ default: m.UserProfilePortal })));
+const PremiumUpgradeModal = lazy(() => import('./components/PremiumUpgradeModal').then(m => ({ default: m.PremiumUpgradeModal })));
 
 const MainAppContent: React.FC = () => {
   const { verifyEmail } = useAuth();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  
+  // Track if modals have ever been opened to lazy-load their chunks only when needed
+  const [hasOpenedAuth, setHasOpenedAuth] = useState(false);
+  const [hasOpenedProfile, setHasOpenedProfile] = useState(false);
+  
+  useEffect(() => { if (isAuthOpen) setHasOpenedAuth(true); }, [isAuthOpen]);
+  useEffect(() => { if (isProfileOpen) setHasOpenedProfile(true); }, [isProfileOpen]);
   
   const [verifyStatus, setVerifyStatus] = useState<{
     loading: boolean;
@@ -63,7 +71,7 @@ const MainAppContent: React.FC = () => {
     }
 
     return () => window.removeEventListener('open-auth-modal', handleOpenAuth);
-  }, []);
+  }, [verifyEmail]);
 
   return (
     <div id="playme-main-wrapper" className={`${isYtActive ? 'bg-transparent' : 'bg-[#131314]'} text-[#e5e2e3] font-sans min-h-screen relative overflow-x-hidden`}>
@@ -104,12 +112,13 @@ const MainAppContent: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Premium modals */}
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
-      
-      <UserProfilePortal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
-      
-      <PremiumUpgradeModal />
+      {/* Premium modals - Lazy Loaded */}
+      <Suspense fallback={null}>
+        {hasOpenedAuth && <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}
+        {hasOpenedProfile && <UserProfilePortal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />}
+        {/* PremiumUpgradeModal internal logic triggers its own open state via context, so we just render it. It's safe to load once MavFarmView is idle, but for now we'll just let it load since it's lazy. */}
+        <PremiumUpgradeModal />
+      </Suspense>
     </div>
   );
 };

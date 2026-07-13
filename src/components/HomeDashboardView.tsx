@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { Track } from '../types';
 import { useAudioPlayer } from './AudioPlayerContext';
 import { Play, Pause, Flame, Disc, Radio, ChevronRight, Music3, Eye, ThumbsUp, Clock, Calendar, Loader2, RefreshCw, TrendingUp, Headphones, Star, Mic, Heart, Sparkles } from 'lucide-react';
-import { LyricsShowcase } from './LyricsShowcase';
+const LyricsShowcase = lazy(() => import('./LyricsShowcase').then(m => ({ default: m.LyricsShowcase })));
 import { SongActionsMenu } from './SongActionsMenu';
 import { HScroll } from './HScroll';
 import { MUSIC_GENRES } from '../lib/musicHubData';
@@ -209,7 +209,7 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({ onBrowseAl
         <section className="relative">
           {/* Hero Banner */}
           <div
-            className="relative h-[40vh] md:h-[380px] rounded-3xl overflow-hidden group cursor-pointer border border-white/10 shadow-2xl"
+            className="relative h-72 md:h-[380px] rounded-3xl overflow-hidden group cursor-pointer border border-white/10 shadow-2xl"
             onClick={() => handlePlayHomeTrack(heroTrack, trending)}
           >
             {/* Background image with transition */}
@@ -309,7 +309,7 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({ onBrowseAl
                     : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10 hover:text-white'
                 }`}
               >
-                <img src={t.coverUrl} alt={t.title} className="w-8 h-8 rounded-lg object-cover" />
+                <img src={t.coverUrl} alt={t.title} loading="lazy" className="w-8 h-8 rounded-lg object-cover" />
                 <div className="text-left min-w-0">
                   <p className="text-[10px] font-bold truncate max-w-[120px] capitalize">{t.title}</p>
                   <p className="text-[8px] text-white/40 truncate">{t.artist}</p>
@@ -320,7 +320,9 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({ onBrowseAl
         </section>
       )}
 
-      <LyricsShowcase />
+      <Suspense fallback={<div className="h-[400px] w-full flex items-center justify-center"><div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin"></div></div>}>
+        <LyricsShowcase />
+      </Suspense>
 
       {/* ═══ DYNAMIC SECTIONS ═══ */}
       {sections.map(({ key, data }) => {
@@ -350,7 +352,7 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({ onBrowseAl
                 <div
                   key={track.id}
                   onClick={() => handlePlayHomeTrack(track, data.tracks)}
-                  className={`group relative bg-gradient-to-br ${SECTION_COLORS[key] || 'from-white/5 to-white/[0.02]'} hover:from-white/10 hover:to-white/5 p-3.5 rounded-2xl border border-white/5 hover:border-white/15 transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[260px] w-[80vw] sm:w-[220px] md:w-[240px] max-w-[280px] shrink-0 snap-start shadow-lg backdrop-blur-sm`}
+                  className={`group relative bg-gradient-to-br ${SECTION_COLORS[key] || 'from-white/5 to-white/[0.02]'} hover:from-white/10 hover:to-white/5 p-3.5 rounded-2xl border border-white/5 hover:border-white/15 transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[260px] w-[220px] md:w-[240px] shrink-0 snap-start shadow-lg backdrop-blur-sm`}
                 >
                   {/* Cover Art */}
                   <div className="relative aspect-video rounded-xl overflow-hidden border border-white/10 bg-black/30">
@@ -440,6 +442,7 @@ export const HomeDashboardView: React.FC<HomeDashboardViewProps> = ({ onBrowseAl
                 alt={genre.name}
                 className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                 src={genre.image}
+                loading="lazy"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-3 text-center">
