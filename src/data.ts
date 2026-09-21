@@ -69,7 +69,8 @@ export const TRACKS: Track[] = [
     "url": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
     "coverUrl": "https://lh3.googleusercontent.com/aida-public/AB6AXuBRm4JtmJLq6lj-Hq1JQXSnEV16ZpF8d9jy1pu8VZZDMFq_oldHOckdfwfGLuIz8cpeRRIGN8Sv7BQbQC7hWnOFbmyOe2T0an5hC141_6KKkTnetMGeAc2PO8pCiMKJaKHwHHO8xHqWllbZ59gzl4wuqPnZN9R1s_T_PXJb9IdPMDVJjPVLGJGlENH1mtVRCnSDARIej9SK7u5evV5gW_jYFJu0cOxyKSh3ArjzegGxRd53AZp3WbchEuPiZFDzuOnVC5_GqzOkl4TG",
     "genre": "Pop / Synth Pop",
-    "description": "Modern bouncy bassline with rich retro synth textures. Perfect pop crossover."
+    "description": "Modern bouncy bassline with rich retro synth textures. Perfect pop crossover.",
+    "hasLyrics": true
   },
   {
     "id": "local-train-choo-lo",

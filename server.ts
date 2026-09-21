@@ -445,12 +445,17 @@ app.get("/api/youtube/search", async (req, res) => {
       serverDb.incrementSearchCount(dateStr);
     }
 
-    let searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${maxResults}&type=video&key=${apiKey}`;
+    let searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=${maxResults}&type=video&videoCategoryId=10&key=${apiKey}`;
     if (channelId) {
       searchUrl += `&channelId=${channelId}&order=date`;
     }
     if (query) {
-      searchUrl += `&q=${encodeURIComponent(query)}`;
+      let finalQuery = query;
+      const qLower = finalQuery.toLowerCase();
+      if (!qLower.includes("song") && !qLower.includes("music") && !qLower.includes("audio")) {
+         finalQuery = `${finalQuery} song`;
+      }
+      searchUrl += `&q=${encodeURIComponent(finalQuery)}`;
     }
 
     if (videoDuration && ["long", "medium", "short"].includes(videoDuration)) {
@@ -464,7 +469,7 @@ app.get("/api/youtube/search", async (req, res) => {
       
       try {
         const fallbackSearch = await ytSearch(query || "Podcast");
-        const fallbackResults = fallbackSearch.videos.slice(0, maxResults).map((item: any) => ({
+        let fallbackResults = fallbackSearch.videos.slice(0, maxResults).map((item: any) => ({
           id: `yt-${item.videoId}`,
           title: serverCleanTitle(item.title),
           artist: serverCleanArtistName(item.author?.name || "YouTube"),
@@ -473,10 +478,25 @@ app.get("/api/youtube/search", async (req, res) => {
           url: item.url,
           coverUrl: item.thumbnail || item.image || "",
           genre: "Podcast",
-          description: item.description || "",
           isYoutube: true,
           youtubeId: item.videoId,
+          hasLyrics: serverDb.getHasLyrics(item.videoId),
         }));
+
+        // Strict music filter: discard long videos and unwanted keywords
+        if (videoDuration !== "long") {
+          fallbackResults = fallbackResults.filter((t: any) => {
+            const isTooLong = t.duration > 600; // > 10 minutes
+            const hasBadKeywords = /movie|vlog|trailer|teaser|#shorts|shorts/i.test(t.title);
+            return !isTooLong && !hasBadKeywords;
+          });
+        }
+        
+        fallbackResults.sort((a: any, b: any) => {
+          if (a.hasLyrics && !b.hasLyrics) return -1;
+          if (!a.hasLyrics && b.hasLyrics) return 1;
+          return 0;
+        });
         
         serverDb.setCache(cacheKey, fallbackResults);
         return res.json(fallbackResults);
@@ -535,12 +555,28 @@ app.get("/api/youtube/search", async (req, res) => {
         description,
         isYoutube: true,
         youtubeId: videoId,
+        hasLyrics: serverDb.getHasLyrics(videoId),
       };
     });
+
+    // Strict music filter: discard long videos and unwanted keywords
+    if (videoDuration !== "long") {
+      results = results.filter((t: any) => {
+        const isTooLong = t.duration > 600; // > 10 minutes
+        const hasBadKeywords = /movie|vlog|trailer|teaser|#shorts|shorts/i.test(t.title);
+        return !isTooLong && !hasBadKeywords;
+      });
+    }
 
     if (videoDuration === "long") {
       results = results.filter((t: any) => t.duration >= 600);
     }
+    
+    results.sort((a: any, b: any) => {
+      if (a.hasLyrics && !b.hasLyrics) return -1;
+      if (!a.hasLyrics && b.hasLyrics) return 1;
+      return 0;
+    });
 
     serverDb.setCache(cacheKey, results);
     return res.json(results);
@@ -797,21 +833,52 @@ interface HomeCategory {
 
 interface HomeData {
   trending: HomeCategory;
+  songsForYou?: HomeCategory;
   popularPlaylists: HomeCategory;
   topCharts: HomeCategory;
   recentlyReleased: HomeCategory;
   recommended: HomeCategory;
   livePerformances: HomeCategory;
+  ultraHdPlaylists?: HomeCategory;
+  trendingPlaylists?: HomeCategory;
+  albumsForYou?: HomeCategory;
+  popularContent?: HomeCategory;
+  basedOnRecents?: HomeCategory;
+  stayUpbeat?: HomeCategory;
+  newReleasesForYou?: HomeCategory;
+  hotPlaylists?: HomeCategory;
+  communityPlaylists?: HomeCategory;
+  soulSoothers?: HomeCategory;
+  decades90s?: HomeCategory;
+  stayIndie?: HomeCategory;
+  onTheRoad?: HomeCategory;
+  stationsForYou?: HomeCategory;
   updatedAt: string;
 }
 
 const HOME_CATEGORIES: { key: string; title: string; emoji: string; query: string }[] = [
   { key: 'trending', title: 'Trending Now', emoji: '🔥', query: '' }, // special: uses chart=mostPopular
-  { key: 'popularPlaylists', title: 'Popular Playlists', emoji: '🎵', query: 'Best Music Playlists 2025' },
+  { key: 'songsForYou', title: 'Songs for You', emoji: '🎵', query: 'Best Hindi Bollywood Songs 2025' },
+  { key: 'popularPlaylists', title: 'Popular Playlists', emoji: '🎧', query: 'Best Music Playlists 2025 Bollywood Mix' },
   { key: 'topCharts', title: 'Top Charts', emoji: '📈', query: 'Top Hits Music 2025' },
-  { key: 'recentlyReleased', title: 'Recently Released', emoji: '🎧', query: 'New Music Releases This Week' },
-  { key: 'recommended', title: 'Recommended For You', emoji: '⭐', query: 'Best Songs All Time Music Mix' },
-  { key: 'livePerformances', title: 'Live Performances', emoji: '🎤', query: 'Best Live Music Performance Concert' },
+  { key: 'recentlyReleased', title: 'Featured This Week', emoji: '✨', query: 'New Music Releases This Week 2025' },
+  { key: 'recommended', title: 'Playlists for You', emoji: '⭐', query: 'Best Songs All Time Music Mix Romantic' },
+  { key: 'livePerformances', title: 'Top Videos', emoji: '🎬', query: 'Best Live Music Video Performance Concert' },
+  { key: 'ultraHdPlaylists', title: 'Ultra HD Playlists', emoji: '💿', query: 'Bollywood Romantic Songs HD Playlist 2025' },
+  { key: 'trendingPlaylists', title: 'Trending Playlists', emoji: '🔥', query: 'Trending Bollywood Playlist Feel Good Hindi Songs' },
+  { key: 'albumsForYou', title: 'Albums for You', emoji: '💿', query: 'Best Bollywood Albums 2024 2025' },
+  { key: 'popularContent', title: 'Popular Ultra HD Content', emoji: '🌟', query: 'Popular Bollywood Songs Ultra HD Arijit Singh Shashwat Sachdev' },
+  { key: 'basedOnRecents', title: 'Based on Your Recents', emoji: '🕐', query: 'Bollywood Romantic Mix Sachin Jigar 2025' },
+  // ── New sections from screenshots ──
+  { key: 'stayUpbeat', title: 'Stay Upbeat', emoji: '💃', query: 'Punjabi Dance Bollywood Upbeat Party Songs 2025' },
+  { key: 'newReleasesForYou', title: 'New Releases for You', emoji: '🆕', query: 'Latest New Bollywood Songs Released 2025 July' },
+  { key: 'hotPlaylists', title: 'Hot Playlists', emoji: '🔥', query: 'Fresh Hindi Top Playlist 2025 Trending Songs' },
+  { key: 'communityPlaylists', title: 'Community Playlists', emoji: '👥', query: 'Best Bollywood Mix Community Listener Playlist Shaan Hindi' },
+  { key: 'soulSoothers', title: 'Soul Soothers', emoji: '🕊️', query: 'Sufi Bollywood Soul Chill Relaxing Rainy Day Songs' },
+  { key: 'decades90s', title: '90s & 2000s', emoji: '⏮️', query: '90s 2000s Bollywood Best Classic Nostalgia Songs' },
+  { key: 'stayIndie', title: 'Stay Indie', emoji: '🎸', query: 'Indian Indie Coke Studio Tamil Pop Best Songs 2025' },
+  { key: 'onTheRoad', title: 'On the Road', emoji: '🚗', query: 'Road Trip Drive Best Music Songs Bollywood Long Drive' },
+  { key: 'stationsForYou', title: 'Stations for You', emoji: '📻', query: 'Bollywood Romance Radio Kishore Kumar Station Mix Songs' },
 ];
 
 async function fetchTrendingVideos(): Promise<any[]> {
@@ -932,11 +999,26 @@ async function updateHomeData() {
 
     const homeData: HomeData = {
       trending: { title: 'Trending Now', emoji: '🔥', tracks: results.trending || [] },
-      popularPlaylists: { title: 'Popular Playlists', emoji: '🎵', tracks: results.popularPlaylists || [] },
+      songsForYou: { title: 'Songs for You', emoji: '🎵', tracks: results.songsForYou || [] },
+      popularPlaylists: { title: 'Popular Playlists', emoji: '🎧', tracks: results.popularPlaylists || [] },
       topCharts: { title: 'Top Charts', emoji: '📈', tracks: results.topCharts || [] },
-      recentlyReleased: { title: 'Recently Released', emoji: '🎧', tracks: results.recentlyReleased || [] },
-      recommended: { title: 'Recommended For You', emoji: '⭐', tracks: results.recommended || [] },
-      livePerformances: { title: 'Live Performances', emoji: '🎤', tracks: results.livePerformances || [] },
+      recentlyReleased: { title: 'Featured This Week', emoji: '✨', tracks: results.recentlyReleased || [] },
+      recommended: { title: 'Playlists for You', emoji: '⭐', tracks: results.recommended || [] },
+      livePerformances: { title: 'Top Videos', emoji: '🎬', tracks: results.livePerformances || [] },
+      ultraHdPlaylists: { title: 'Ultra HD Playlists', emoji: '💿', tracks: results.ultraHdPlaylists || [] },
+      trendingPlaylists: { title: 'Trending Playlists', emoji: '🔥', tracks: results.trendingPlaylists || [] },
+      albumsForYou: { title: 'Albums for You', emoji: '💿', tracks: results.albumsForYou || [] },
+      popularContent: { title: 'Popular Ultra HD Content', emoji: '🌟', tracks: results.popularContent || [] },
+      basedOnRecents: { title: 'Based on Your Recents', emoji: '🕐', tracks: results.basedOnRecents || [] },
+      stayUpbeat: { title: 'Stay Upbeat', emoji: '💃', tracks: results.stayUpbeat || [] },
+      newReleasesForYou: { title: 'New Releases for You', emoji: '🆕', tracks: results.newReleasesForYou || [] },
+      hotPlaylists: { title: 'Hot Playlists', emoji: '🔥', tracks: results.hotPlaylists || [] },
+      communityPlaylists: { title: 'Community Playlists', emoji: '👥', tracks: results.communityPlaylists || [] },
+      soulSoothers: { title: 'Soul Soothers', emoji: '🕊️', tracks: results.soulSoothers || [] },
+      decades90s: { title: '90s & 2000s', emoji: '⏮️', tracks: results.decades90s || [] },
+      stayIndie: { title: 'Stay Indie', emoji: '🎸', tracks: results.stayIndie || [] },
+      onTheRoad: { title: 'On the Road', emoji: '🚗', tracks: results.onTheRoad || [] },
+      stationsForYou: { title: 'Stations for You', emoji: '📻', tracks: results.stationsForYou || [] },
       updatedAt: new Date().toISOString(),
     };
 
@@ -978,11 +1060,17 @@ app.get('/api/home', (req, res) => {
   if (!homeData) {
     return res.json({
       trending: { title: 'Trending Now', emoji: '🔥', tracks: [] },
-      popularPlaylists: { title: 'Popular Playlists', emoji: '🎵', tracks: [] },
+      songsForYou: { title: 'Songs for You', emoji: '🎵', tracks: [] },
+      popularPlaylists: { title: 'Popular Playlists', emoji: '🎧', tracks: [] },
       topCharts: { title: 'Top Charts', emoji: '📈', tracks: [] },
-      recentlyReleased: { title: 'Recently Released', emoji: '🎧', tracks: [] },
-      recommended: { title: 'Recommended For You', emoji: '⭐', tracks: [] },
-      livePerformances: { title: 'Live Performances', emoji: '🎤', tracks: [] },
+      recentlyReleased: { title: 'Featured This Week', emoji: '✨', tracks: [] },
+      recommended: { title: 'Playlists for You', emoji: '⭐', tracks: [] },
+      livePerformances: { title: 'Top Videos', emoji: '🎬', tracks: [] },
+      ultraHdPlaylists: { title: 'Ultra HD Playlists', emoji: '💿', tracks: [] },
+      trendingPlaylists: { title: 'Trending Playlists', emoji: '🔥', tracks: [] },
+      albumsForYou: { title: 'Albums for You', emoji: '💿', tracks: [] },
+      popularContent: { title: 'Popular Ultra HD Content', emoji: '🌟', tracks: [] },
+      basedOnRecents: { title: 'Based on Your Recents', emoji: '🕐', tracks: [] },
       updatedAt: null,
       message: 'Home data is being loaded for the first time. Refresh in a moment.',
     });
@@ -1295,6 +1383,9 @@ app.get("/api/lyrics/synced", async (req, res) => {
         source = "youtube-cc";
         const result = { ytSubtitles, syncedLyrics, plainLyrics, geniusLyrics, source };
         serverDb.setCache(cacheKey, result);
+        if (youtubeId && typeof youtubeId === 'string') {
+          serverDb.setHasLyrics(youtubeId, true);
+        }
         return res.json(result);
       }
     } catch (ytErr) {
@@ -1389,6 +1480,13 @@ app.get("/api/lyrics/synced", async (req, res) => {
 
   const result = { syncedLyrics, plainLyrics, geniusLyrics, source };
   serverDb.setCache(cacheKey, result);
+  
+  if (syncedLyrics || plainLyrics || geniusLyrics) {
+    if (youtubeId && typeof youtubeId === 'string') {
+      serverDb.setHasLyrics(youtubeId, true);
+    }
+  }
+  
   return res.json(result);
 });
 
@@ -2453,7 +2551,7 @@ app.post("/api/auth/reset", async (req, res) => {
 });
 
 // ==========================================
-// Vite Dev & Production Integration middleware
+// Socket.IO — Real-time Social Messaging
 // ==========================================
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
@@ -2470,9 +2568,83 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  // Create HTTP server for Socket.IO integration
+  const { createServer } = await import("http");
+  const { Server } = await import("socket.io") as any;
+
+  const httpServer = createServer(app);
+  const io = new Server(httpServer, {
+    path: "/social-ws",
+    cors: { origin: "*", methods: ["GET", "POST"] },
+  });
+
+  // Track online users: userId → socketId
+  const onlineUsers = new Map<string, string>();
+  // Track rooms: roomId → Set of socket IDs
+  const rooms = new Map<string, Set<string>>();
+
+  io.on("connection", (socket: any) => {
+    const { userId, displayName } = socket.handshake.auth || {};
+    if (!userId) return socket.disconnect();
+
+    onlineUsers.set(userId, socket.id);
+    console.log(`[Social WS] User connected: ${displayName} (${userId})`);
+
+    // ── Join a chat room ──────────────────────────────────────────────────────
+    socket.on("join_chat", ({ chatId }: { chatId: string }) => {
+      socket.join(`chat:${chatId}`);
+    });
+
+    // ── Send message (broadcast to chat room) ─────────────────────────────────
+    socket.on("send_message", ({ chatId, message }: { chatId: string; message: any }) => {
+      socket.to(`chat:${chatId}`).emit("new_message", { chatId, message });
+    });
+
+    // ── Typing indicator ──────────────────────────────────────────────────────
+    socket.on("typing", ({ chatId, displayName: dn }: { chatId: string; displayName: string }) => {
+      socket.to(`chat:${chatId}`).emit("typing", { chatId, displayName: dn });
+    });
+
+    // ── Create listening room ─────────────────────────────────────────────────
+    socket.on("create_room", ({ room }: { room: any }) => {
+      socket.join(`room:${room.id}`);
+      if (!rooms.has(room.id)) rooms.set(room.id, new Set());
+      rooms.get(room.id)!.add(socket.id);
+      io.to(`room:${room.id}`).emit("room_created", { room });
+    });
+
+    // ── Join listening room ───────────────────────────────────────────────────
+    socket.on("join_room", ({ roomId, user }: { roomId: string; user: any }) => {
+      socket.join(`room:${roomId}`);
+      if (!rooms.has(roomId)) rooms.set(roomId, new Set());
+      rooms.get(roomId)!.add(socket.id);
+      socket.to(`room:${roomId}`).emit("user_joined_room", { user });
+    });
+
+    // ── Sync room position (host broadcasts every 5s) ─────────────────────────
+    socket.on("sync_position", ({ roomId, position, status }: { roomId: string; position: number; status: string }) => {
+      socket.to(`room:${roomId}`).emit("room_sync", { position, status });
+    });
+
+    // ── Leave listening room ──────────────────────────────────────────────────
+    socket.on("leave_room", ({ roomId, userId: uid }: { roomId: string; userId: string }) => {
+      socket.leave(`room:${roomId}`);
+      rooms.get(roomId)?.delete(socket.id);
+      io.to(`room:${roomId}`).emit("user_left_room", { userId: uid });
+    });
+
+    // ── Disconnect ────────────────────────────────────────────────────────────
+    socket.on("disconnect", () => {
+      onlineUsers.delete(userId);
+      console.log(`[Social WS] User disconnected: ${displayName} (${userId})`);
+    });
+  });
+
+  httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server fully operational on http://localhost:${PORT}`);
+    console.log(`[Social WS] Socket.IO ready on /social-ws`);
   });
 }
 
 startServer();
+

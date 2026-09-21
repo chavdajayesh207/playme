@@ -255,9 +255,16 @@ export const DiscoverView: React.FC<DiscoverViewProps> = ({
                           </div>
 
                           <div className="mt-1.5 min-w-0">
-                            <h4 className="font-headline text-xs font-bold text-white uppercase tracking-wide group-hover:text-[#00f2ff] transition-colors truncate">
-                              {categoryName}
-                            </h4>
+                            <div className="flex justify-between items-start gap-2">
+                                <h4 className="font-headline text-xs font-bold text-white uppercase tracking-wide group-hover:text-[#00f2ff] transition-colors truncate">
+                                  {categoryName}
+                                </h4>
+                                {tracks.some(t => t.hasLyrics) && (
+                                    <span className="text-[9px] bg-pink-500/20 text-pink-400 px-1.5 py-0.5 rounded-full font-bold whitespace-nowrap shadow-[0_0_10px_rgba(236,72,153,0.3)] border border-pink-500/30">
+                                      ♪
+                                    </span>
+                                )}
+                            </div>
                             <span className="text-[9px] font-mono font-medium text-[#b9cacb]/50 block mt-0.5">
                               {tracks.length} track{tracks.length > 1 ? 's' : ''}
                             </span>
@@ -479,11 +486,16 @@ export const DiscoverView: React.FC<DiscoverViewProps> = ({
                     <div className="flex-grow min-w-0 pr-8">
                       <div className="flex justify-between items-start gap-1">
                         <h4
-                          className={`font-semibold text-sm truncate ${
+                          className={`font-semibold text-sm truncate flex items-center gap-2 ${
                             isActive ? 'text-pink-400' : 'text-white'
                           }`}
                         >
-                          {track.title}
+                          <span className="truncate">{track.title}</span>
+                          {track.hasLyrics && (
+                            <span className="text-[9px] bg-pink-500/20 text-pink-400 px-1.5 py-0.5 rounded-full font-bold whitespace-nowrap shadow-[0_0_10px_rgba(236,72,153,0.3)] border border-pink-500/30">
+                              ♪ LYRICS
+                            </span>
+                          )}
                         </h4>
                       </div>
                       <p className="text-xs text-[#b9cacb] mt-0.5 truncate">{track.artist}</p>

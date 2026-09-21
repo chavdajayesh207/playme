@@ -74,7 +74,7 @@ const MainAppContent: React.FC = () => {
   }, [verifyEmail]);
 
   return (
-    <div id="playme-main-wrapper" className={`${isYtActive ? 'bg-transparent' : 'bg-[#131314]'} text-[#e5e2e3] font-sans min-h-screen relative overflow-x-hidden`}>
+    <div id="playme-main-wrapper" className={`${isYtActive ? 'bg-transparent' : 'bg-[#131314]'} text-[#e5e2e3] font-sans min-h-screen relative overflow-x-hidden max-w-[2000px] mx-auto`}>
       <MavFarmView 
         onAuthClick={() => setIsAuthOpen(true)}
         onProfileClick={() => setIsProfileOpen(true)}

@@ -2,13 +2,15 @@ import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useAudioPlayer, useAudioTime } from './AudioPlayerContext';
 import { useAuth } from './AuthContext';
 import { Track } from '../types';
-import { Search, ShoppingCart, ArrowLeft, Home, Music, List, User, Folder, Mic, MoreVertical, Bell, Download, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, EyeOff, AlignLeft, ScrollText, Clock, Minus, Plus, RotateCcw, Repeat, Share2, Camera, Activity, Zap, Crown, ChevronDown, Shuffle } from 'lucide-react';
+import { Search, ShoppingCart, ArrowLeft, Home, Music, List, User, Folder, Mic, MoreVertical, Bell, Download, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, EyeOff, AlignLeft, ScrollText, Clock, Minus, Plus, RotateCcw, Repeat, Share2, Camera, Activity, Zap, Crown, ChevronDown, Shuffle, MessageCircle, UserCircle, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Logo } from './Logo';
 import { fetchSyncedLyrics, getActiveLyricIndex, type SyncedLyricLine, type LyricsResult } from '../lib/lyrics';
 import { ErrorBoundary } from './ErrorBoundary';
 import { SongActionsMenu } from './SongActionsMenu';
 import { WordByWordLine } from './WordByWordLine';
+import { SettingsModal } from './SettingsModal';
+import { SocialProvider } from './social/SocialContext';
 
 const LiveStageView = lazy(() => import('./LiveStageView').then(m => ({ default: React.memo(m.LiveStageView) })));
 const DiscoverView = lazy(() => import('./DiscoverView').then(m => ({ default: React.memo(m.DiscoverView) })));
@@ -16,13 +18,17 @@ const CollectionsView = lazy(() => import('./CollectionsView').then(m => ({ defa
 const LibraryView = lazy(() => import('./LibraryView').then(m => ({ default: React.memo(m.LibraryView) })));
 const HomeDashboardView = lazy(() => import('./HomeDashboardView').then(m => ({ default: React.memo(m.HomeDashboardView) })));
 const DownloadModal = lazy(() => import('./DownloadModal').then(m => ({ default: m.DownloadModal })));
+const SocialChatPage = lazy(() => import('./social/SocialChatPage').then(m => ({ default: m.SocialChatPage })));
+const SocialPeoplePage = lazy(() => import('./social/SocialPeoplePage').then(m => ({ default: m.SocialPeoplePage })));
 
 enum TabletTab {
   HOME = 'home',
   LIVE = 'live',
   GENRES = 'genres',
   FAVORITES = 'favorites',
-  LIBRARY = 'library'
+  LIBRARY = 'library',
+  SOCIAL_CHAT = 'social_chat',
+  SOCIAL_PEOPLE = 'social_people',
 }
 
 type LyricMode = 'off' | 'line' | 'scroll';
@@ -81,6 +87,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [hasOpenedDownloadModal, setHasOpenedDownloadModal] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (showDownloadModal) setHasOpenedDownloadModal(true);
@@ -134,18 +141,24 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
   useEffect(() => {
     const resetScrolls = () => {
       if (homePlayerScrollRef.current) {
-        homePlayerScrollRef.current.scrollTop = 0;
+        homePlayerScrollRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       }
       if (dashboardScrollRef.current) {
-        dashboardScrollRef.current.scrollTop = 0;
+        dashboardScrollRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       }
       if (otherTabsScrollRef.current) {
-        otherTabsScrollRef.current.scrollTop = 0;
+        otherTabsScrollRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       }
     };
     resetScrolls();
-    const t = setTimeout(resetScrolls, 50); // Double check for async mount
-    return () => clearTimeout(t);
+    const t1 = setTimeout(resetScrolls, 50); // Double check for instant mount
+    const t2 = setTimeout(resetScrolls, 250); // Check after AnimatePresence mode="wait" transition
+    const t3 = setTimeout(resetScrolls, 500); // Bulletproof fallback
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
   }, [activeTab, showDashboard]);
 
   // Keep userVideoOpacity updated when videoOpacity changes (only when scrolled to top / above threshold)
@@ -272,14 +285,49 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
     }
   }, [user]);
 
-  // Auto-switch to player view when track starts playing
+  // Auto-dim background when dashboard is opened, restore when closed
+  useEffect(() => {
+    if (showDashboard) {
+      if (videoOpacity !== 0.12) {
+        setUserVideoOpacity(videoOpacity);
+      }
+      setVideoOpacity(0.12);
+    } else {
+      if (videoOpacity === 0.12) {
+        setVideoOpacity(userVideoOpacity > 0.12 ? userVideoOpacity : 1.0);
+      }
+    }
+  }, [showDashboard, setVideoOpacity]);
+
+  // Auto-switch to player view when track starts playing AND always scroll to top
   useEffect(() => {
     if (currentTrack && isPlaying) {
       setShowDashboard(false);
+      setActiveTab(TabletTab.HOME);
+      setIsHomeTabActive(true);
+      // Immediately snap to top — do it in multiple frames to beat any layout reflow
+      const jumpToTop = () => {
+        if (homePlayerScrollRef.current) {
+          homePlayerScrollRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        }
+      };
+      jumpToTop();
+      setTimeout(jumpToTop, 50);
+      setTimeout(jumpToTop, 200);
+      setTimeout(jumpToTop, 400);
     }
   }, [currentTrack, isPlaying]);
 
   const handleTabChange = (tab: TabletTab) => {
+    if (tab === activeTab) {
+      // Force scroll reset if clicking the active tab again
+      if (tab === TabletTab.HOME) {
+        if (showDashboard && dashboardScrollRef.current) dashboardScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        if (!showDashboard && homePlayerScrollRef.current) homePlayerScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (otherTabsScrollRef.current) {
+        otherTabsScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
     setActiveTab(tab);
     setIsHomeTabActive(tab === TabletTab.HOME);
   };
@@ -729,6 +777,99 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
     return videoOpacity >= 0.6 ? 'text-glow-strong' : 'text-glow';
   };
 
+  const isSocialTab = activeTab === TabletTab.SOCIAL_CHAT || activeTab === TabletTab.SOCIAL_PEOPLE;
+
+  const renderNavPill = () => (
+    <div className={`flex items-center gap-1 md:gap-4 px-2 py-1.5 rounded-[32px] transition-all duration-500 ${isYtActive ? 'bg-black/50 backdrop-blur-xl border border-white/15 shadow-[0_4px_30px_rgba(0,0,0,0.5)]' : 'bg-white/[0.06] backdrop-blur-md border border-white/10 shadow-[0_2px_20px_rgba(0,0,0,0.3)]'}`}>
+      
+      {/* Chats → Social Chat Page */}
+      <div 
+        className="flex flex-col items-center justify-center cursor-pointer min-w-[70px] md:min-w-[80px]"
+        onClick={() => handleTabChange(TabletTab.SOCIAL_CHAT)}
+      >
+        <div className={`rounded-full px-4 py-1.5 relative transition-colors ${activeTab === TabletTab.SOCIAL_CHAT ? (isYtActive ? 'bg-white/20 text-white' : 'bg-pink-500/20 text-pink-400') : 'text-white/50 hover:text-white'}`}>
+          <MessageCircle size={22} className={activeTab === TabletTab.SOCIAL_CHAT ? 'fill-current' : ''} />
+          {activeTab !== TabletTab.SOCIAL_CHAT && <div className="absolute top-1.5 right-3 w-2 h-2 bg-pink-500 rounded-full" />}
+          {activeTab === TabletTab.SOCIAL_CHAT && <div className="absolute -top-1 -right-2 bg-pink-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-pink-600 shadow-sm">7</div>}
+        </div>
+        <span className={`text-[10px] md:text-[11px] font-medium mt-0.5 ${activeTab === TabletTab.SOCIAL_CHAT ? (isYtActive ? 'text-white' : 'text-pink-400') : 'text-white/50'}`}>Chats</span>
+      </div>
+
+      {/* Contacts → Social People Page */}
+      <div 
+        className="flex flex-col items-center justify-center cursor-pointer min-w-[70px] md:min-w-[80px]"
+        onClick={() => handleTabChange(TabletTab.SOCIAL_PEOPLE)}
+      >
+        <div className={`rounded-full px-4 py-1.5 transition-colors ${activeTab === TabletTab.SOCIAL_PEOPLE ? (isYtActive ? 'bg-white/20 text-white' : 'bg-pink-500/20 text-pink-400') : 'text-white/50 hover:text-white'}`}>
+          <UserCircle size={22} className={activeTab === TabletTab.SOCIAL_PEOPLE ? 'fill-current' : ''} />
+        </div>
+        <span className={`text-[10px] md:text-[11px] font-medium mt-0.5 ${activeTab === TabletTab.SOCIAL_PEOPLE ? (isYtActive ? 'text-white' : 'text-pink-400') : 'text-white/50'}`}>Contacts</span>
+      </div>
+
+      {/* Settings (Opens Settings Modal) */}
+      <div 
+        className="flex flex-col items-center justify-center cursor-pointer min-w-[70px] md:min-w-[80px]"
+        onClick={() => setIsSettingsOpen(true)}
+      >
+        <div className="rounded-full px-4 py-1.5 transition-colors text-white/50 hover:text-white">
+          <Settings size={22} />
+        </div>
+        <span className="text-[10px] md:text-[11px] font-medium mt-0.5 text-white/50">Settings</span>
+      </div>
+
+      {/* Profile / Portfolio Badge (Integrated) */}
+      <div className="flex items-center gap-3 pl-2 ml-2 border-l border-white/10 select-none cursor-pointer group pr-2 py-1"
+        onClick={() => {
+          if (!user) onAuthClick();
+          else if (onProfileClick) onProfileClick();
+        }}
+        title={user ? `Logged in as ${user.displayName}` : 'Sign In / User Profile'}
+      >
+        <div className="relative">
+          <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-pink-500/60 shrink-0 flex items-center justify-center bg-white/5 group-hover:border-pink-400/80 transition-colors">
+            {user ? (
+              user.photoURL ? (
+                <img alt={user.displayName} src={user.photoURL} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[10px] font-bold text-pink-400 uppercase">
+                  {(user.displayName || user.email || 'U').slice(0, 2)}
+                </span>
+              )
+            ) : (
+              <User className="w-4 h-4 text-gray-400" />
+            )}
+          </div>
+          {isSubscribed && (
+            <div className="absolute -top-1 -right-1 bg-black rounded-full p-0.5">
+              <Crown size={12} className="text-yellow-400 fill-yellow-400" />
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col text-left leading-tight flex-1 min-w-0">
+          <span className="text-white text-[11px] font-bold uppercase tracking-wider truncate max-w-[120px]">
+            {user ? user.displayName : 'Guest Listener'}
+          </span>
+          <div className="flex gap-1">
+            {user && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); if (onProfileClick) onProfileClick(); }}
+                className="text-[8px] text-[#00f2ff] hover:text-[#00f2ff]/80 font-bold tracking-wider uppercase text-left cursor-pointer"
+              >
+                MANAGE
+              </button>
+            )}
+            <button 
+              onClick={(e) => { e.stopPropagation(); user ? logout() : onAuthClick(); }}
+              className="text-[8px] text-pink-400 hover:text-pink-300 font-bold tracking-wider uppercase text-left cursor-pointer"
+            >
+              {user ? 'LOGOUT' : 'SIGN IN'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div 
       id="playme-fullscreen-player"
@@ -749,10 +890,10 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
               key={currentTrack.id}
               alt={currentTrack.title}
               className="w-full h-full object-cover"
-              style={{ opacity: activeTab === TabletTab.HOME ? 0.85 : 0.25 }}
+              style={{ opacity: activeTab === TabletTab.HOME ? 0.85 : (activeTab === TabletTab.SOCIAL_CHAT || activeTab === TabletTab.SOCIAL_PEOPLE) ? 0.04 : 0.25 }}
               src={currentTrack.coverUrl}
               initial={{ opacity: 0 }}
-              animate={{ opacity: activeTab === TabletTab.HOME ? 0.85 : 0.25 }}
+              animate={{ opacity: activeTab === TabletTab.HOME ? 0.85 : (activeTab === TabletTab.SOCIAL_CHAT || activeTab === TabletTab.SOCIAL_PEOPLE) ? 0.04 : 0.25 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.5 }}
             />
@@ -786,6 +927,15 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
               setShowDashboard(false);
               setLyricMode('off');
               if (videoOpacity === 0.12) setVideoOpacity(1.0);
+              // Jump to top immediately
+              if (homePlayerScrollRef.current) {
+                homePlayerScrollRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+              }
+              setTimeout(() => {
+                if (homePlayerScrollRef.current) {
+                  homePlayerScrollRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                }
+              }, 100);
             }}
             className={`flex items-center space-x-2 cursor-pointer group shrink-0 ${lyricMode !== 'off' ? 'pointer-events-none' : 'pointer-events-auto'}`}
             title="Playme Player"
@@ -794,28 +944,34 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
             <ArrowLeft className="w-4 h-4 text-pink-500 group-hover:-translate-x-0.5 transition-transform" />
           </div>
 
-          {/* CENTER: Spotify-style Search Bar */}
-          <div className={`flex-1 max-w-lg mx-auto px-2 ${lyricMode !== 'off' ? 'pointer-events-none' : 'pointer-events-auto'}`}>
-            <div className="search-bar-spotify flex items-center px-4 py-2.5 w-full">
-              <Search className="w-4 h-4 text-gray-400 shrink-0" />
-              <input 
-                className="bg-transparent border-none focus:ring-0 text-sm w-full ml-3 placeholder-gray-500 text-white outline-none font-medium" 
-                placeholder="What do you want to play?" 
-                type="text"
-                value={searchQuery}
-                onFocus={() => {
-                  if (activeTab !== TabletTab.GENRES) {
-                    handleTabChange(TabletTab.GENRES);
-                  }
-                }}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (activeTab !== TabletTab.GENRES) {
-                    handleTabChange(TabletTab.GENRES);
-                  }
-                }}
-              />
-            </div>
+          {/* CENTER: Contextual Navigation (Search or Nav Pill) */}
+          <div className={`flex-1 flex justify-center items-center transition-opacity duration-500 ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'} select-none`}>
+            {isSocialTab ? (
+              renderNavPill()
+            ) : (
+              <div className="w-full max-w-lg mx-auto px-2 transition-opacity duration-300">
+                <div className="search-bar-spotify flex items-center px-4 py-2.5 w-full">
+                  <Search className="w-4 h-4 text-gray-400 shrink-0" />
+                  <input 
+                    className="bg-transparent border-none focus:ring-0 text-sm w-full ml-3 placeholder-gray-500 text-white outline-none font-medium" 
+                    placeholder="What do you want to play?" 
+                    type="text"
+                    value={searchQuery}
+                    onFocus={() => {
+                      if (activeTab !== TabletTab.GENRES) {
+                        handleTabChange(TabletTab.GENRES);
+                      }
+                    }}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      if (activeTab !== TabletTab.GENRES) {
+                        handleTabChange(TabletTab.GENRES);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* RIGHT: Premium button (Removed) */}
@@ -833,13 +989,22 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                 onClick={() => {
                   handleTabChange(TabletTab.HOME);
                   setShowDashboard(false); // Force show player view
+                  // Immediately jump to top
+                  if (homePlayerScrollRef.current) {
+                    homePlayerScrollRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                  }
+                  setTimeout(() => {
+                    if (homePlayerScrollRef.current) {
+                      homePlayerScrollRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                    }
+                  }, 100);
                 }}
                 className={`glass-mav w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white/20 transition-all hover:scale-105 cursor-pointer text-white ${
                   activeTab === TabletTab.HOME && !showDashboard ? 'ring-1 ring-pink-500 bg-pink-500/20' : ''
                 }`}
                 title="Go to Home Player"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <Logo size={20} withText={false} theme="dark" animate={true} />
               </button>
             </div>
             <div className="glass-dark-mav w-full md:w-14 rounded-[2rem] md:rounded-3xl py-3 px-4 md:px-0 md:py-6 flex flex-row md:flex-col items-center justify-around md:justify-center space-x-2 md:space-x-0 md:space-y-6 sidebar-nav-scroll shadow-2xl backdrop-blur-xl border border-white/10" id="sidebar-nav">
@@ -1050,7 +1215,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                                   const target = e.target as HTMLElement;
                                   
                                   // Ignore clicks on functional buttons or interactive areas
-                                  if (target.closest('button, a, input, [role="button"], .playback-bar, .lyric-immersive-line, .lyric-immersive-next, .song-actions-menu, .lyric-mode-pill, .lyric-sync-controller')) return;
+                                  if (target.closest('button, a, input, [role="button"], .playback-bar, .lyric-line, .lyric-immersive-single, .lyric-immersive-next, .song-actions-menu, .lyric-mode-pill, .lyric-sync-controller')) return;
                                   
                                   // Ignore if clicking the scrollbar of the lyrics container
                                   if (target.classList.contains('lyrics-immersive-scroll') && e.clientX >= target.getBoundingClientRect().right - 20) {
@@ -1125,7 +1290,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                                                   key={idx}
                                                   data-lyric-active={isActive ? 'true' : 'false'}
                                                   onClick={() => seek(line.time)}
-                                                  className={`w-full text-left py-1 md:py-2 transition-all duration-300 cursor-pointer focus:outline-none flex items-start ${
+                                                  className={`lyric-line w-full text-left py-1 md:py-2 transition-all duration-300 cursor-pointer focus:outline-none flex items-start ${
                                                     isActive
                                                       ? 'text-white text-3xl md:text-[2.5rem] leading-tight font-black opacity-100 scale-100 drop-shadow-[0_2px_20px_rgba(255,255,255,0.2)] lyric-immersive-active-anim'
                                                       : isPast
@@ -1553,18 +1718,15 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
                           <div className="w-px h-3 bg-white/10" />
                           <button
                             onClick={() => {
-                              setDiscoverSubTab('local');
-                              handleTabChange(TabletTab.GENRES);
+                              const el = document.getElementById('artist-carousel');
+                              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                             }}
-                            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-[0.12em] text-white/50 hover:text-white hover:bg-white/10 transition-all duration-300 cursor-pointer active:scale-95"
-                            title="See all tracks"
-                            id="see-all-tracks-btn"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-[0.12em] text-white/50 hover:text-white hover:bg-white/5 transition-all duration-300 cursor-pointer active:scale-95"
                           >
-                            <Search className="w-3.5 h-3.5 text-pink-400" />
-                            <span>See All</span>
+                            <ChevronDown className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Scroll Down</span>
                           </button>
                         </div>
-                        <span className="text-[9px] font-mono text-white/20 uppercase tracking-widest font-semibold">Quick navigation</span>
                       </div>
 
                       {/* Related Tracks & Videos */}
@@ -1802,6 +1964,38 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
             </motion.div>
             )}
             </AnimatePresence>
+
+            {/* Social Pages — Fixed full-screen overlay respecting sidebars */}
+            {(activeTab === TabletTab.SOCIAL_CHAT || activeTab === TabletTab.SOCIAL_PEOPLE) && (
+              <div
+                className="fixed inset-0 z-[45] flex flex-col"
+                style={{
+                  background: 'rgba(7, 9, 15, 0.96)',
+                  backdropFilter: 'blur(4px)',
+                  paddingLeft: 'max(0px, min(128px, 8vw))',
+                  paddingRight: 'max(0px, min(80px, 6vw))',
+                  paddingTop: '72px',
+                  paddingBottom: '24px',
+                }}
+              >
+                <Suspense fallback={<div className="w-full h-full flex items-center justify-center"><div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin"></div></div>}>
+                  {activeTab === TabletTab.SOCIAL_CHAT && (
+                    <ErrorBoundary inline>
+                      <SocialProvider firebaseUser={user}>
+                        <SocialChatPage />
+                      </SocialProvider>
+                    </ErrorBoundary>
+                  )}
+                  {activeTab === TabletTab.SOCIAL_PEOPLE && (
+                    <ErrorBoundary inline>
+                      <SocialProvider firebaseUser={user}>
+                        <SocialPeoplePage />
+                      </SocialProvider>
+                    </ErrorBoundary>
+                  )}
+                </Suspense>
+              </div>
+            )}
           </div>
 
           {/* Right vertical utility selectors */}
@@ -1943,118 +2137,12 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
           </aside>
         </div>
 
-        {/* Adaptive Footer Navigation Bar — glassmorphic, adapts to video/audio mode */}
-        <div className={`hidden md:flex fixed bottom-6 left-1/2 -translate-x-1/2 ${isPodcastPlayerActive ? 'z-[35]' : 'z-[40]'} justify-center select-none pointer-events-none`}>
-          <div 
-            className={`flex items-center gap-1 px-1.5 py-1.5 rounded-full transition-all duration-500 ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'} ${
-              isYtActive 
-                ? 'bg-black/50 backdrop-blur-xl border border-white/15 shadow-[0_4px_30px_rgba(0,0,0,0.5)]' 
-                : 'bg-white/[0.06] backdrop-blur-md border border-white/10 shadow-[0_2px_20px_rgba(0,0,0,0.3)]'
-            }`}
-          >
-            <button
-              onClick={() => {
-                if (activeTab === TabletTab.HOME) {
-                  // Already on home — scroll back to top of player view
-                  if (homePlayerScrollRef.current) {
-                    homePlayerScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-                  }
-                  setShowDashboard(false);
-                } else {
-                  handleTabChange(TabletTab.HOME);
-                  setShowDashboard(false);
-                }
-              }}
-              className={`px-5 md:px-7 py-2 md:py-2.5 rounded-full text-[11px] md:text-xs font-bold uppercase tracking-[0.15em] transition-all duration-300 cursor-pointer ${
-                activeTab === TabletTab.HOME
-                  ? isYtActive
-                    ? 'bg-white/20 text-white shadow-md backdrop-blur-sm drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]'
-                    : 'bg-pink-500/20 text-pink-400 shadow-md'
-                  : isYtActive
-                    ? 'text-white/70 hover:text-white hover:bg-white/10 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]'
-                    : 'text-white/50 hover:text-white hover:bg-white/10'
-              }`}
-              title="Return to Main Track info"
-            >
-              HOME
-            </button>
-            <div className={`w-px h-4 rounded-full ${isYtActive ? 'bg-white/20' : 'bg-white/10'}`} />
-            <button
-              onClick={() => {
-                if (activeTab === TabletTab.GENRES) {
-                  if (otherTabsScrollRef.current) {
-                    otherTabsScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-                  }
-                } else {
-                  setDiscoverSubTab('local');
-                  handleTabChange(TabletTab.GENRES);
-                }
-              }}
-              className={`px-5 md:px-7 py-2 md:py-2.5 rounded-full text-[11px] md:text-xs font-bold uppercase tracking-[0.15em] transition-all duration-300 cursor-pointer ${
-                activeTab === TabletTab.GENRES
-                  ? isYtActive
-                    ? 'bg-white/20 text-white shadow-md backdrop-blur-sm drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]'
-                    : 'bg-pink-500/20 text-pink-400 shadow-md'
-                  : isYtActive
-                    ? 'text-white/70 hover:text-white hover:bg-white/10 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]'
-                    : 'text-white/50 hover:text-white hover:bg-white/10'
-              }`}
-              title="Search and Discover Offline Catalog"
-            >
-              SEE ALL
-            </button>
+        {/* Conditional Bottom Navigation (Hidden on Social Pages) */}
+        {!isSocialTab && (
+          <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] pointer-events-auto transition-opacity duration-500 ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'} select-none`}>
+            {renderNavPill()}
           </div>
-        </div>
-
-        {/* Fixed Guest Listener / User Badge (Top-Right on Mobile, Bottom-Left on Desktop) */}
-        <div className={`fixed top-6 right-6 md:top-auto md:bottom-6 md:left-8 md:right-auto z-[60] pointer-events-auto transition-opacity duration-500 flex items-center gap-3 ${lyricMode !== 'off' ? 'opacity-0 pointer-events-none' : 'opacity-100'} user-badge-bottom select-none`}
-          onClick={() => {
-            if (!user) onAuthClick();
-          }}
-          title={user ? `Logged in as ${user.displayName}` : 'Sign In / User Profile'}
-        >
-          <div className="relative">
-            <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-pink-500/60 shrink-0 flex items-center justify-center bg-white/5 cursor-pointer hover:border-pink-400/80 transition-colors" onClick={(e) => { e.stopPropagation(); if (user && onProfileClick) onProfileClick(); }}>
-              {user ? (
-                user.photoURL ? (
-                  <img alt={user.displayName} src={user.photoURL} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-[10px] font-bold text-pink-400 uppercase">
-                    {(user.displayName || user.email || 'U').slice(0, 2)}
-                  </span>
-                )
-              ) : (
-                <User className="w-4 h-4 text-gray-400" />
-              )}
-            </div>
-            {isSubscribed && (
-              <div className="absolute -top-1 -right-1 bg-black rounded-full p-0.5">
-                <Crown size={12} className="text-yellow-400 fill-yellow-400" />
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col text-left leading-tight flex-1 min-w-0">
-            <span className="text-white text-[11px] font-bold uppercase tracking-wider truncate max-w-[120px]">
-              {user ? user.displayName : 'Guest Listener'}
-            </span>
-            <div className="flex gap-1">
-              {user && (
-                <button 
-                  onClick={(e) => { e.stopPropagation(); if (onProfileClick) onProfileClick(); }}
-                  className="text-[8px] text-[#00f2ff] hover:text-[#00f2ff]/80 font-bold tracking-wider uppercase text-left cursor-pointer"
-                >
-                  MANAGE
-                </button>
-              )}
-              <button 
-                onClick={(e) => { e.stopPropagation(); user ? logout() : onAuthClick(); }}
-                className="text-[8px] text-pink-400 hover:text-pink-300 font-bold tracking-wider uppercase text-left cursor-pointer"
-              >
-                {user ? 'LOGOUT' : 'SIGN IN'}
-              </button>
-            </div>
-          </div>
-      </div>
+        )}
       <Suspense fallback={null}>
         {hasOpenedDownloadModal && (
           <DownloadModal 
@@ -2064,6 +2152,7 @@ export const MavFarmView: React.FC<MavFarmViewProps> = ({ onAuthClick, onProfile
           />
         )}
       </Suspense>
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 };

@@ -487,18 +487,18 @@ export const MusicHubView: React.FC = () => {
                 <div
                   key={item.id}
                   onClick={() => openSubHub(item)}
-                  className="flex-none w-40 h-44 md:w-52 md:h-56 rounded-3xl snap-start cursor-pointer group relative overflow-hidden transition-all duration-500 hover:scale-[1.03] hover:shadow-[0_0_30px_rgba(0,242,255,0.08)] border border-white/5"
+                  className="flex-none w-36 md:w-44 aspect-[4/5] rounded-2xl md:rounded-3xl snap-start cursor-pointer group relative overflow-hidden transition-all duration-500 hover:scale-[1.03] hover:shadow-[0_0_30px_rgba(0,242,255,0.08)] border border-white/5"
                 >
                   <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                   <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-80 transition-opacity duration-300`} />
                   <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-                  <div className="absolute inset-0 p-5 flex flex-col justify-between">
-                    <div className="text-[#00f2ff] bg-black/40 backdrop-blur-md p-2 rounded-xl w-fit border border-white/10 flex items-center justify-center">
-                      {getMadeForYouIcon(item.id, 20)}
+                  <div className="absolute inset-0 p-4 md:p-5 flex flex-col justify-between">
+                    <div className="text-[#00f2ff] bg-black/40 backdrop-blur-md p-3 rounded-2xl w-fit border border-white/10 flex items-center justify-center shadow-lg">
+                      {getMadeForYouIcon(item.id, 32)}
                     </div>
                     <div>
-                      <h3 className="font-headline text-base font-bold text-white mb-1 drop-shadow-md">{item.name}</h3>
-                      <p className="text-[10px] text-white/60 line-clamp-2 font-sans">{item.subtitle}</p>
+                      <h3 className="font-headline text-sm md:text-base font-bold text-white mb-1 drop-shadow-md">{item.name}</h3>
+                      <p className="text-[9px] md:text-[10px] text-white/70 line-clamp-2 font-sans">{item.subtitle}</p>
                     </div>
                   </div>
                   <div className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 border border-white/20">

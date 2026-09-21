@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlayMe — Executive Summary</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: #1a1a2e;
+    background: #ffffff;
+    font-size: 11px;
+    line-height: 1.6;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* --- COVER PAGE --- */
+  .cover-page {
+    width: 100%;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a0b2e 30%, #2d1b4e 60%, #0a0a1a 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 60px 80px;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+  }
+  .cover-page::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 30% 40%, rgba(0, 242, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(255, 0, 127, 0.06) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .cover-logo {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    margin-bottom: 40px;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-logo .bar {
+    width: 8px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  .cover-logo .bar:nth-child(1) { height: 24px; background: #9fa0ec; }
+  .cover-logo .bar:nth-child(2) { height: 36px; background: #7e78e2; }
+  .cover-logo .bar:nth-child(3) { height: 48px; background: #463bb5; }
+  .cover-logo .bar:nth-child(4) { height: 32px; background: #00f2ff; }
+  .cover-logo .bar:nth-child(5) { height: 20px; background: #ff007f; }
+  .cover-logo .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: #ff007f;
+    margin-bottom: 2px; margin-left: 2px;
+  }
+  .cover-title {
+    font-size: 64px;
+    font-weight: 900;
+    letter-spacing: -2px;
+    color: #ffffff;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-title span { color: #00f2ff; }
+  .cover-tagline {
+    font-size: 18px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 60px;
+    position: relative;
+    z-index: 2;
+  }
+  .cover-meta {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 40px;
+    margin-top: 20px;
+  }
+  .cover-meta-item {
+    text-align: center;
+  }
+  .cover-meta-item .label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 4px;
+  }
+  .cover-meta-item .value {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+  }
+  .cover-badge {
+    position: absolute;
+    bottom: 40px;
+    right: 60px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 12px 20px;
+    color: rgba(255,255,255,0.5);
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .cover-confidential {
+    position: absolute;
+    bottom: 40px;
+    left: 60px;
+    color: rgba(255,255,255,0.25);
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  /* --- CONTENT PAGES --- */
+  .page {
+    padding: 50px 60px;
+    min-height: 100vh;
+    page-break-after: always;
+    position: relative;
+  }
+  .page:last-child { page-break-after: avoid; }
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f0f5;
+  }
+  .page-header-logo {
+    font-size: 14px;
+    font-weight: 800;
+    color: #1a1a2e;
+    letter-spacing: -0.5px;
+  }
+  .page-header-logo span { color: #00f2ff; }
+  .page-header-doc {
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #999;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 900;
+    color: #1a1a2e;
+    margin-bottom: 6px;
+    letter-spacing: -1px;
+  }
+  h1 .accent { color: #7e78e2; }
+  .section-subtitle {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 24px;
+    font-weight: 400;
+  }
+  h2 {
+    font-size: 16px;
+    font-weight: 800;
+    color: #1a1a2e;
+    margin: 28px 0 12px 0;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #f0f0f5;
+    letter-spacing: -0.3px;
+  }
+  h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #463bb5;
+    margin: 16px 0 8px 0;
+  }
+  p {
+    margin-bottom: 10px;
+    color: #444;
+    font-size: 11px;
+    line-height: 1.7;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 10px;
+  }
+  thead th {
+    background: #1a1a2e;
+    color: #fff;
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  thead th:first-child { border-radius: 6px 0 0 0; }
+  thead th:last-child { border-radius: 0 6px 0 0; }
+  tbody td {
+    padding: 7px 12px;
+    border-bottom: 1px solid #f0f0f5;
+    color: #444;
+  }
+  tbody tr:nth-child(even) { background: #fafaff; }
+  tbody tr:hover { background: #f0f0ff; }
+  .check { color: #22c55e; font-weight: 700; }
+  .cross { color: #ef4444; font-weight: 700; }
+
+  /* Callout boxes */
+  .callout {
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 10.5px;
+    line-height: 1.6;
+  }
+  .callout-insight {
+    background: linear-gradient(135deg, #f0f0ff, #e8e6ff);
+    border-left: 4px solid #7e78e2;
+    color: #2d1b4e;
+  }
+  .callout-important {
+    background: linear-gradient(135deg, #fff5f5, #ffe8e8);
+    border-left: 4px solid #ef4444;
+    color: #7f1d1d;
+  }
+  .callout-tip {
+    background: linear-gradient(135deg, #f0fffe, #e0faf8);
+    border-left: 4px solid #00f2ff;
+    color: #064e3b;
+  }
+  .callout-title {
+    font-weight: 700;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .stat-card {
+    background: #fafaff;
+    border: 1px solid #ececf5;
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 22px;
+    font-weight: 900;
+    color: #463bb5;
+    letter-spacing: -1px;
+  }
+  .stat-label {
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #888;
+    margin-top: 4px;
+  }
+
+  /* Feature cards */
+  .features-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 14px 0;
+  }
+  .feature-card {
+    background: #fafaff;
+    border: 1px solid #ececf5;
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .feature-card .emoji { font-size: 18px; margin-bottom: 6px; }
+  .feature-card h4 {
+    font-size: 11px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 4px;
+  }
+  .feature-card p {
+    font-size: 9.5px;
+    color: #666;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  /* Revenue model */
+  .revenue-bar {
+    display: flex;
+    height: 28px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 12px 0 8px 0;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .revenue-bar div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.5px;
+  }
+
+  /* Timeline */
+  .timeline {
+    margin: 14px 0;
+    position: relative;
+    padding-left: 20px;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, #7e78e2, #00f2ff);
+    border-radius: 2px;
+  }
+  .timeline-item {
+    position: relative;
+    margin-bottom: 14px;
+    padding-left: 16px;
+  }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -17px;
+    top: 4px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #7e78e2;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #7e78e2;
+  }
+  .timeline-item.completed::before { background: #22c55e; box-shadow: 0 0 0 2px #22c55e; }
+  .timeline-item.current::before { background: #00f2ff; box-shadow: 0 0 0 2px #00f2ff; }
+  .timeline-item .time-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: #7e78e2;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .timeline-item .time-content {
+    font-size: 10px;
+    color: #444;
+    margin-top: 2px;
+  }
+
+  /* Footer */
+  .page-footer {
+    position: absolute;
+    bottom: 20px;
+    left: 60px;
+    right: 60px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 7px;
+    color: #bbb;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-top: 1px solid #f0f0f5;
+    padding-top: 8px;
+  }
+
+  /* Two column layout */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  /* Pricing cards */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 14px 0;
+  }
+  .pricing-card {
+    border: 1px solid #ececf5;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    position: relative;
+  }
+  .pricing-card.featured {
+    border-color: #7e78e2;
+    background: linear-gradient(135deg, #fafaff, #f0f0ff);
+    box-shadow: 0 4px 20px rgba(126,120,226,0.1);
+  }
+  .pricing-card .plan-name {
+    font-size: 12px;
+    font-weight: 800;
+    color: #1a1a2e;
+    margin-bottom: 4px;
+  }
+  .pricing-card .plan-price {
+    font-size: 20px;
+    font-weight: 900;
+    color: #463bb5;
+  }
+  .pricing-card .plan-period {
+    font-size: 9px;
+    color: #888;
+  }
+  .pricing-card .plan-features {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 0 0;
+    text-align: left;
+  }
+  .pricing-card .plan-features li {
+    font-size: 9px;
+    color: #555;
+    padding: 3px 0;
+    padding-left: 14px;
+    position: relative;
+  }
+  .pricing-card .plan-features li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: #22c55e;
+    font-weight: 700;
+  }
+
+  ul {
+    padding-left: 16px;
+    margin: 8px 0;
+  }
+  li {
+    font-size: 10.5px;
+    color: #444;
+    margin-bottom: 4px;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<!-- =================== COVER PAGE =================== -->
+<div class="cover-page">
+  <div class="cover-logo">
+    <div class="bar"></div>
+    <div class="bar"></div>
+    <div class="bar"></div>
+    <div class="bar"></div>
+    <div class="bar"></div>
+    <div class="dot"></div>
+  </div>
+  <div class="cover-title">Play<span>Me</span>.</div>
+  <div class="cover-tagline">Reimagining Music for the Next Billion Listeners</div>
+  <div class="cover-meta">
+    <div class="cover-meta-item">
+      <div class="label">Document</div>
+      <div class="value">Executive Summary</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="label">Stage</div>
+      <div class="value">Pre-Seed / Seed</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="label">Sector</div>
+      <div class="value">MusicTech</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="label">Year</div>
+      <div class="value">2026</div>
+    </div>
+  </div>
+  <div class="cover-badge">Investor Copy</div>
+  <div class="cover-confidential">Confidential — For intended recipients only</div>
+</div>
+
+<!-- =================== PAGE 1: PROBLEM & SOLUTION =================== -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-header-logo">Play<span>Me</span>.</div>
+    <div class="page-header-doc">Executive Summary &bull; 2026</div>
+  </div>
+
+  <h1>The <span class="accent">Problem</span></h1>
+  <p class="section-subtitle">The music streaming market is massive — and massively broken.</p>
+
+  <p>The global music streaming market is worth <strong>$54.1 billion</strong> (2025) and is projected to exceed <strong>$115 billion by 2030</strong>, growing at a CAGR of 17–21%. Yet the industry is riddled with problems that incumbents have no incentive to solve.</p>
+
+  <table>
+    <thead>
+      <tr><th style="width:30%">Problem</th><th>Impact</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Algorithm Fatigue</strong></td><td>Users feel trapped in "echo chambers" — platforms prioritize safe, repetitive hits over genuine music discovery. 73% of Gen Z listeners report wanting more diverse recommendations.</td></tr>
+      <tr><td><strong>Feature Bloat</strong></td><td>Spotify, Apple Music, and others aggressively push podcasts, audiobooks, and video content — alienating music-first listeners who just want to hear songs.</td></tr>
+      <tr><td><strong>Emerging Market Failure</strong></td><td>In India, 96% of smartphone users stream music, but only <strong>38% have ever paid</strong>. Current pricing models fail to convert the next billion users.</td></tr>
+      <tr><td><strong>Artist Exploitation</strong></td><td>The "pro-rata" royalty model funnels money to superstars. Mid-tier artists earn fractions of a penny per stream, making music unsustainable as a career.</td></tr>
+      <tr><td><strong>Content Saturation</strong></td><td>150,000+ tracks uploaded daily — including floods of AI-generated spam — makes quality discovery nearly impossible.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-insight">
+    <div class="callout-title">💡 Core Insight</div>
+    Users don't need <em>another</em> music library. They need a <strong>smarter, more intentional listening experience</strong> that feels premium, personal, and alive.
+  </div>
+
+  <h1 style="margin-top: 28px;">The <span class="accent">Solution</span>: PlayMe</h1>
+  <p class="section-subtitle">A music-first streaming platform built for how people actually want to listen.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="emoji">🎵</div>
+      <h4>Immersive Cinematic Player</h4>
+      <p>Full-screen dynamic backgrounds, adjustable YouTube video overlays (Full → Vivid → Ambient → Dim), and glassmorphic premium UI.</p>
+    </div>
+    <div class="feature-card">
+      <div class="emoji">🎤</div>
+      <h4>Word-by-Word Synced Lyrics</h4>
+      <p>Real-time karaoke-style lyrics with adjustable timing offset — far beyond the line-by-line lyrics offered by competitors.</p>
+    </div>
+    <div class="feature-card">
+      <div class="emoji">🤖</div>
+      <h4>AI-Powered Intelligence</h4>
+      <p>Gemini-powered Vibe Queues, mood detection, AI music tutor, and smart track summaries that understand context.</p>
+    </div>
+    <div class="feature-card">
+      <div class="emoji">🎪</div>
+      <h4>Live Concert Streaming</h4>
+      <p>Browse and watch live performances, festivals, and concerts in real-time — a feature no competitor bundles natively.</p>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>PlayMe — Confidential</span>
+    <span>Page 1</span>
+  </div>
+</div>
+
+<!-- =================== PAGE 2: MARKET & BUSINESS =================== -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-header-logo">Play<span>Me</span>.</div>
+    <div class="page-header-doc">Executive Summary &bull; 2026</div>
+  </div>
+
+  <h1>Market <span class="accent">Opportunity</span></h1>
+  <p class="section-subtitle">A $115B market with massive untapped segments.</p>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">$54.1B</div>
+      <div class="stat-label">Global Market (2025)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">$115.3B</div>
+      <div class="stat-label">Projected (2030)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">818M</div>
+      <div class="stat-label">Global Paid Subscribers</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">17-21%</div>
+      <div class="stat-label">CAGR Growth Rate</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">37%</div>
+      <div class="stat-label">India YoY Growth</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">3h 43m</div>
+      <div class="stat-label">Gen Z Daily Listening</div>
+    </div>
+  </div>
+
+  <div class="callout callout-tip">
+    <div class="callout-title">🇮🇳 India Opportunity</div>
+    India is the world's fastest-growing music streaming market with 37% YoY subscriber growth. 96% of smartphone users stream music — but only 38% have ever paid. PlayMe is positioned to crack this conversion gap with its freemium-first, premium-feel approach.
+  </div>
+
+  <h2>Business Model</h2>
+  <p>PlayMe operates a <strong>freemium model</strong> with four diversified revenue streams:</p>
+
+  <div class="revenue-bar">
+    <div style="width:60%; background: linear-gradient(135deg, #463bb5, #7e78e2);">Subscriptions 60%</div>
+    <div style="width:20%; background: #00f2ff; color: #064e3b;">Ads 20%</div>
+    <div style="width:10%; background: #ff007f;">Artist 10%</div>
+    <div style="width:10%; background: #1a1a2e;">Partners 10%</div>
+  </div>
+
+  <div class="pricing-grid">
+    <div class="pricing-card">
+      <div class="plan-name">Free</div>
+      <div class="plan-price">₹0</div>
+      <div class="plan-period">forever</div>
+      <ul class="plan-features">
+        <li>Ad-supported streaming</li>
+        <li>Standard audio quality</li>
+        <li>Limited skips</li>
+        <li>Basic discovery</li>
+      </ul>
+    </div>
+    <div class="pricing-card featured">
+      <div class="plan-name">PlayMe Pro</div>
+      <div class="plan-price">₹49</div>
+      <div class="plan-period">/month (~$0.59)</div>
+      <ul class="plan-features">
+        <li>Ad-free experience</li>
+        <li>High quality audio</li>
+        <li>Offline downloads</li>
+        <li>AI Vibe Queues</li>
+      </ul>
+    </div>
+    <div class="pricing-card">
+      <div class="plan-name">PlayMe Ultra</div>
+      <div class="plan-price">₹99</div>
+      <div class="plan-period">/month (~$1.19)</div>
+      <ul class="plan-features">
+        <li>Lossless Hi-Res audio</li>
+        <li>Full AI suite</li>
+        <li>Priority support</li>
+        <li>Early access features</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Competitive Landscape</h2>
+  <table>
+    <thead>
+      <tr><th>Feature</th><th>PlayMe</th><th>Spotify</th><th>Apple Music</th><th>YouTube Music</th><th>JioSaavn</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Music-First Focus</strong></td><td class="check">✓</td><td class="cross">✗ (Podcasts)</td><td class="check">✓</td><td class="cross">✗ (Video)</td><td class="check">✓</td></tr>
+      <tr><td><strong>Word-by-Word Lyrics</strong></td><td class="check">✓</td><td>Line only</td><td>Line only</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+      <tr><td><strong>AI Mood Playlists</strong></td><td class="check">✓ Gemini</td><td>Basic</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+      <tr><td><strong>Live Concerts</strong></td><td class="check">✓ Built-in</td><td class="cross">✗</td><td class="cross">✗</td><td class="check">✓</td><td class="cross">✗</td></tr>
+      <tr><td><strong>Video Integration</strong></td><td class="check">✓ Adjustable</td><td class="cross">✗</td><td>Limited</td><td class="check">✓</td><td class="cross">✗</td></tr>
+      <tr><td><strong>Downloads (Audio+Video)</strong></td><td class="check">✓ MP3+MP4</td><td>Audio</td><td>Audio</td><td>Audio</td><td>Audio</td></tr>
+      <tr><td><strong>Zero Licensing Cost</strong></td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-important">
+    <div class="callout-title">⚡ Key Differentiator</div>
+    PlayMe leverages YouTube's existing music ecosystem, <strong>eliminating the need for expensive record label licensing deals</strong> that cost competitors 65–70% of their revenue. This fundamentally changes unit economics and allows aggressive pricing in emerging markets.
+  </div>
+
+  <div class="page-footer">
+    <span>PlayMe — Confidential</span>
+    <span>Page 2</span>
+  </div>
+</div>
+
+<!-- =================== PAGE 3: TECH, TRACTION & ASK =================== -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-header-logo">Play<span>Me</span>.</div>
+    <div class="page-header-doc">Executive Summary &bull; 2026</div>
+  </div>
+
+  <h1>Technology & <span class="accent">Architecture</span></h1>
+  <p class="section-subtitle">Built on a modern, scalable full-stack architecture.</p>
+
+  <div class="two-col">
+    <div>
+      <h3>Frontend</h3>
+      <ul>
+        <li>React 19 with Vite for blazing-fast builds</li>
+        <li>Tailwind CSS 4 for responsive UI</li>
+        <li>Motion/Framer for fluid animations</li>
+        <li>IndexedDB (Dexie) for offline-first caching</li>
+        <li>YouTube IFrame API for video playback</li>
+      </ul>
+      <h3>Backend</h3>
+      <ul>
+        <li>Node.js + Express REST API</li>
+        <li>JWT authentication + bcrypt encryption</li>
+        <li>Nodemailer for transactional emails</li>
+        <li>Google Gemini AI integration</li>
+        <li>YouTube Data API v3 + yt-search</li>
+      </ul>
+    </div>
+    <div>
+      <h3>External Integrations</h3>
+      <ul>
+        <li><strong>YouTube</strong> — Audio/video streaming & search</li>
+        <li><strong>Genius</strong> — Synced lyrics fetching</li>
+        <li><strong>Last.fm</strong> — Music metadata enrichment</li>
+        <li><strong>Spotify API</strong> — Recommendation engine</li>
+        <li><strong>Google Gemini</strong> — AI mood & vibe analysis</li>
+      </ul>
+      <h3>Infrastructure</h3>
+      <ul>
+        <li>Currently deployed on <strong>Render</strong></li>
+        <li>Ready for AWS/GCP migration at scale</li>
+        <li>PostgreSQL migration planned for production</li>
+        <li>CDN-ready static asset architecture</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Traction & Roadmap</h2>
+
+  <div class="timeline">
+    <div class="timeline-item completed">
+      <div class="time-label">Completed</div>
+      <div class="time-content"><strong>Full-stack MVP</strong> — 30+ features shipped: player, AI, lyrics, auth, downloads, email system, session management. Live at playme-gwl6.onrender.com</div>
+    </div>
+    <div class="timeline-item current">
+      <div class="time-label">Month 1–3 (Post-Funding)</div>
+      <div class="time-content"><strong>Foundation</strong> — PostgreSQL migration, mobile app MVP (React Native), 1,000 beta users, app store listing</div>
+    </div>
+    <div class="timeline-item">
+      <div class="time-label">Month 4–6</div>
+      <div class="time-content"><strong>Growth</strong> — Marketing launch, 10,000 users, artist onboarding program, premium tier monetization</div>
+    </div>
+    <div class="timeline-item">
+      <div class="time-label">Month 7–12</div>
+      <div class="time-content"><strong>Scale</strong> — 50,000 users, artist dashboard & analytics, partnerships with indie labels, Series A preparation</div>
+    </div>
+  </div>
+
+  <h2>The Ask</h2>
+
+  <div class="two-col" style="margin-top: 12px;">
+    <div>
+      <div style="background: linear-gradient(135deg, #463bb5, #7e78e2); color: #fff; border-radius: 14px; padding: 20px 24px; text-align: center;">
+        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.7; margin-bottom: 4px;">Seed Round</div>
+        <div style="font-size: 32px; font-weight: 900; letter-spacing: -1px;">₹50L – ₹1Cr</div>
+        <div style="font-size: 11px; opacity: 0.8; margin-top: 2px;">($60K – $120K USD)</div>
+      </div>
+    </div>
+    <div>
+      <table>
+        <thead><tr><th>Use of Funds</th><th>%</th></tr></thead>
+        <tbody>
+          <tr><td>Engineering & Infrastructure</td><td><strong>35%</strong></td></tr>
+          <tr><td>User Acquisition & Marketing</td><td><strong>25%</strong></td></tr>
+          <tr><td>Mobile App Development</td><td><strong>20%</strong></td></tr>
+          <tr><td>Legal & Compliance</td><td><strong>10%</strong></td></tr>
+          <tr><td>Operations & Contingency</td><td><strong>10%</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h2>Vision</h2>
+  <div style="background: linear-gradient(135deg, #0a0a1a, #1a0b2e); color: #fff; border-radius: 14px; padding: 24px 28px; margin-top: 12px; text-align: center;">
+    <p style="font-size: 16px; font-weight: 300; color: rgba(255,255,255,0.9); line-height: 1.8; margin: 0; font-style: italic;">
+      "PlayMe exists to make music feel alive again. In a world where streaming has become passive background noise, we bring back the <strong style="color: #00f2ff;">magic of intentional listening</strong> — where every song has lyrics dancing on screen, where AI understands your mood, where live concerts are one tap away, and where the interface itself is a work of art."
+    </p>
+  </div>
+
+  <div style="text-align: center; margin-top: 20px;">
+    <p style="font-size: 10px; color: #888; margin: 0;">📧 playmeshow07@gmail.com &nbsp;&bull;&nbsp; 🌐 playme-gwl6.onrender.com &nbsp;&bull;&nbsp; 💻 github.com/chavdajayesh207/playme</p>
+  </div>
+
+  <div class="page-footer">
+    <span>PlayMe — Confidential &bull; © 2026 All Rights Reserved</span>
+    <span>Page 3</span>
+  </div>
+</div>
+
+</body>
+</html>

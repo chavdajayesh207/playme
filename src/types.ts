@@ -19,6 +19,7 @@ export interface Track {
   isOffline?: boolean; // locally stored file
   category?: string; // playlist/category assignment
   isPodcast?: boolean;
+  hasLyrics?: boolean; // lyrics availability flag
 }
 
 export interface Playlist {

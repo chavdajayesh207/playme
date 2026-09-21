@@ -1,5 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { playmeDb } from '../lib/db';
+import { signInWithPopup } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { firebaseAuth, googleProvider, db, storage } from '../lib/firebase';
 
 export interface UserProfile {
   uid: string;
@@ -8,7 +12,7 @@ export interface UserProfile {
   photoURL?: string;
   avatar?: string;
   createdAt: string;
-  provider: 'password';
+  provider: 'password' | 'google';
   isVerified?: boolean;
   phoneNumber?: string;
   isSubscribed?: boolean;
@@ -19,10 +23,12 @@ interface AuthContextType {
   loading: boolean;
   loginWithEmail: (email: string, pass: string) => Promise<UserProfile>;
   signUpWithEmail: (email: string, pass: string, name: string) => Promise<UserProfile>;
+  loginWithGoogle: () => Promise<UserProfile>;
   resetPassword: (email: string) => Promise<void>;
   resetPasswordConfirm: (token: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUserProfile: (updates: { displayName?: string; phoneNumber?: string }) => Promise<void>;
+  updatePhotoURL: (file: File) => Promise<string>;
   sendVerificationEmail: () => Promise<void>;
   verifyEmail: (token: string) => Promise<void>;
   isSubscribed: boolean;
@@ -32,6 +38,24 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Sync user profile to Firestore (for social search features)
+const syncToFirestore = async (profile: UserProfile) => {
+  try {
+    await setDoc(doc(db, 'users', profile.uid), {
+      displayName: profile.displayName,
+      username: profile.email.split('@')[0].toLowerCase(),
+      email: profile.email,
+      avatarUrl: profile.photoURL || null,
+      avatarColor: 'from-pink-500 to-purple-600',
+      isOnline: true,
+      provider: profile.provider,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.warn('[Auth] Firestore sync failed (enable Firestore in console):', err);
+  }
+};
 
 const formatUserProfile = (raw: any): UserProfile => {
   return {
@@ -124,6 +148,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('playme_auth_token', data.token);
       setUser(profile);
       await syncProfileToLocalDB(profile);
+      await syncToFirestore(profile); // <-- sync to Firestore for social search
+      return profile;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async (): Promise<UserProfile> => {
+    setLoading(true);
+    try {
+      const result = await signInWithPopup(firebaseAuth, googleProvider);
+      const fbUser = result.user;
+
+      // Try to register/login via backend with Google credentials
+      let profile: UserProfile;
+      try {
+        const res = await fetch('/api/auth/google-signin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: fbUser.uid,
+            email: fbUser.email,
+            displayName: fbUser.displayName,
+            photoURL: fbUser.photoURL,
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          profile = formatUserProfile({ ...data.user, provider: 'google' });
+          localStorage.setItem('playme_auth_token', data.token);
+        } else {
+          // Backend doesn't have google-signin endpoint yet — create local profile
+          throw new Error('backend-unavailable');
+        }
+      } catch {
+        // Fallback: create profile from Google data directly
+        profile = {
+          uid: fbUser.uid,
+          email: fbUser.email || '',
+          displayName: fbUser.displayName || 'Google User',
+          photoURL: fbUser.photoURL || undefined,
+          provider: 'google',
+          createdAt: new Date().toISOString(),
+          isVerified: true,
+          isSubscribed: false,
+        };
+        // Store a Google-specific token marker
+        localStorage.setItem('playme_google_uid', fbUser.uid);
+        localStorage.setItem('playme_auth_provider', 'google');
+      }
+
+      setUser(profile);
+      await syncProfileToLocalDB(profile);
+      await syncToFirestore(profile);
       return profile;
     } finally {
       setLoading(false);
@@ -148,6 +226,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('playme_auth_token', data.token);
       setUser(profile);
       await syncProfileToLocalDB(profile);
+      await syncToFirestore(profile); // <-- sync to Firestore for social search
       return profile;
     } finally {
       setLoading(false);
@@ -209,6 +288,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await syncProfileToLocalDB(profile);
   };
 
+  const updatePhotoURL = async (file: File): Promise<string> => {
+    if (!user) throw new Error('Not authenticated');
+    try {
+      // Upload to Firebase Storage
+      const storageRef = ref(storage, `avatars/${user.uid}/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      // Update local state
+      const updatedProfile = { ...user, photoURL: downloadURL };
+      setUser(updatedProfile);
+      await syncProfileToLocalDB(updatedProfile);
+
+      // Update Firestore
+      await syncToFirestore({ ...updatedProfile, photoURL: downloadURL });
+
+      // Try updating backend too
+      const token = localStorage.getItem('playme_auth_token');
+      if (token) {
+        fetch('/api/auth/update-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ photoURL: downloadURL })
+        }).catch(() => { /* ignore if backend doesn't support yet */ });
+      }
+
+      return downloadURL;
+    } catch (err: any) {
+      throw new Error(err?.message || 'Photo upload failed');
+    }
+  };
+
   const sendVerificationEmail = async (): Promise<void> => {
     const token = localStorage.getItem('playme_auth_token');
     if (!token) throw new Error('Not authenticated');
@@ -263,10 +374,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         loginWithEmail,
         signUpWithEmail,
+        loginWithGoogle,
         resetPassword,
         resetPasswordConfirm,
         logout,
         updateUserProfile,
+        updatePhotoURL,
         sendVerificationEmail,
         verifyEmail,
         isSubscribed: user?.isSubscribed || false,

@@ -7,6 +7,7 @@ const TRACKS_METADATA_FILE = path.join(DATA_DIR, "tracks.json");
 const AUDIO_DIR = path.join(DATA_DIR, "audio");
 const COVERS_DIR = path.join(DATA_DIR, "covers");
 const HOME_CACHE_FILE = path.join(DATA_DIR, "home_cache.json");
+const LYRICS_FLAGS_FILE = path.join(DATA_DIR, "lyrics_flags.json");
 
 // Ensure directories exist on load
 function ensureDirs() {
@@ -50,6 +51,7 @@ class ServerDb {
   private tracks: Record<string, ServerTrack> = {};
   private searchLimits: Record<string, number> = {};
   private homeCache: any = null;
+  private lyricsFlags: Record<string, boolean> = {};
 
   constructor() {
     this.init();
@@ -101,6 +103,17 @@ class ServerDb {
         console.log(`[Database] Loaded home dashboard cache.`);
       } catch (e) {
         this.homeCache = null;
+      }
+    }
+
+    // Load lyrics flags
+    if (fs.existsSync(LYRICS_FLAGS_FILE)) {
+      try {
+        const raw = fs.readFileSync(LYRICS_FLAGS_FILE, "utf-8");
+        this.lyricsFlags = JSON.parse(raw);
+        console.log(`[Database] Loaded ${Object.keys(this.lyricsFlags).length} lyrics availability flags.`);
+      } catch (e) {
+        this.lyricsFlags = {};
       }
     }
 
@@ -376,6 +389,33 @@ class ServerDb {
       fs.writeFileSync(HOME_CACHE_FILE, JSON.stringify(this.homeCache, null, 2), 'utf-8');
     } catch (e) {
       console.error('[Database] Failed to write home cache:', e);
+    }
+  }
+
+  // Lyrics Flags Accessors
+  public getHasLyrics(id: string): boolean {
+    if (!id) return false;
+    // Strip "yt-" prefix if it exists to match universally
+    const cleanId = id.replace(/^yt-/, '');
+    return !!this.lyricsFlags[cleanId];
+  }
+
+  public setHasLyrics(id: string, hasLyrics: boolean) {
+    if (!id) return;
+    const cleanId = id.replace(/^yt-/, '');
+    
+    // Only update if changed
+    if (!!this.lyricsFlags[cleanId] !== hasLyrics) {
+      this.lyricsFlags[cleanId] = hasLyrics;
+      this.saveLyricsFlags();
+    }
+  }
+
+  private saveLyricsFlags() {
+    try {
+      fs.writeFileSync(LYRICS_FLAGS_FILE, JSON.stringify(this.lyricsFlags, null, 2), "utf-8");
+    } catch (e) {
+      console.error("[Database] Failed to write lyrics flags:", e);
     }
   }
 }

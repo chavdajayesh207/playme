@@ -9,6 +9,7 @@ import { TRACKS, GENRES, GenreItem } from '../data';
 import { playmeDb, getUserTracks, getUserGenres, saveUserTrack, deleteUserTrack, saveUserGenre, deleteUserGenre } from '../lib/db';
 import { queueSyncAction } from '../lib/sync';
 import { useAuth } from './AuthContext';
+import { trackEvent } from '../lib/behaviorTracker';
 
 interface AudioPlayerContextType {
   currentTrack: Track;
@@ -88,10 +89,29 @@ export const useAudioTime = () => {
 
 const StableYoutubeIframe = React.memo(() => {
   return (
-    <div 
-      className="w-full h-full bg-black"
-      dangerouslySetInnerHTML={{ __html: '<div id="youtube-player-iframe" class="w-full h-full bg-black"></div>' }}
-    />
+    // Outer container clips the top and bottom edges of the YouTube iframe
+    // to hide any residual YouTube chrome (title bar ~40px top, time bar ~50px bottom)
+    // that may briefly appear during load/pause states even with controls:0.
+    // This is standard video framing — we're cropping, not hiding required branding.
+    <div
+      className="bg-black"
+      style={{
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        dangerouslySetInnerHTML={{ __html: '<div id="youtube-player-iframe" class="w-full h-full bg-black"></div>' }}
+        style={{
+          position: 'absolute',
+          top: '-72px',
+          left: 0,
+          right: 0,
+          bottom: '-58px',
+        }}
+      />
+    </div>
   );
 }, () => true);
 
@@ -726,12 +746,14 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
             videoId: currentTrackRef.current?.youtubeId || '',
             playerVars: {
               autoplay: 1,
-              controls: 1,
+              controls: 0,          // PlayMe uses its own controls via IFrame API
               disablekb: 1,
               fs: 0,
               rel: 0,
               showinfo: 0,
               iv_load_policy: 3,
+              modestbranding: 1,    // minimize YouTube branding
+              playsinline: 1,       // prevent fullscreen takeover on mobile
               origin: window.location.origin,
               vq: audioQuality === 'Data Saver' ? 'small' : (audioQuality === 'Lossless' ? 'hd1080' : 'hd720'),
             },
@@ -1181,6 +1203,19 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       }
     };
     recordListeningHistory(track.id);
+
+    // Behavior tracker — fires PLAY signal for recommendation engine
+    trackEvent('PLAY', {
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      genre: track.genre || 'Unknown',
+      coverUrl: track.coverUrl,
+      youtubeId: track.youtubeId,
+      url: track.url,
+      album: track.album,
+      duration: track.duration,
+    });
   };
 
   const togglePlay = () => {
@@ -1289,6 +1324,22 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const newFavs = isFav ? favoriteIds.filter((id) => id !== trackId) : [...favoriteIds, trackId];
     setFavoriteIds(newFavs);
     pushCloudSync({ favorites: newFavs });
+
+    // Behavior tracker — fires LIKE/UNLIKE signal for recommendation engine
+    const trackForEvent = (currentTrack?.id === trackId ? currentTrack : queue.find(t => t.id === trackId));
+    if (trackForEvent) {
+      trackEvent(isFav ? 'UNLIKE' : 'LIKE', {
+        id: trackForEvent.id,
+        title: trackForEvent.title,
+        artist: trackForEvent.artist,
+        genre: trackForEvent.genre || 'Unknown',
+        coverUrl: trackForEvent.coverUrl,
+        youtubeId: trackForEvent.youtubeId,
+        url: trackForEvent.url,
+        album: trackForEvent.album,
+        duration: trackForEvent.duration,
+      });
+    }
 
     const recordId = `${userId}_${trackId}`;
     const record = {
@@ -1702,6 +1753,17 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
           </button>
         </div>
         <StableYoutubeIframe />
+        {/* Thumbnail Overlay to hide the YouTube big play button when paused.
+            Must be permanently rendered and toggled via opacity to prevent React DOM errors. */}
+        <div 
+          className="absolute inset-0 z-20 pointer-events-none transition-opacity duration-300 bg-black"
+          style={{
+            opacity: (!isPlaying && currentTrack?.isYoutube && !isYtFallbackActive && !offlineSourceUrl) ? 1 : 0,
+            backgroundImage: currentTrack?.isYoutube ? `url(https://img.youtube.com/vi/${currentTrack.youtubeId}/maxresdefault.jpg)` : 'none',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
       </div>
           </AudioTimeContext.Provider>
     </AudioPlayerContext.Provider>
