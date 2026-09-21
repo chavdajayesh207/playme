@@ -752,6 +752,7 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
               rel: 0,
               showinfo: 0,
               iv_load_policy: 3,
+              cc_load_policy: 0,    // ensure closed captions are off automatically
               modestbranding: 1,    // minimize YouTube branding
               playsinline: 1,       // prevent fullscreen takeover on mobile
               origin: window.location.origin,
